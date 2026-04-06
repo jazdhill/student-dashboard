@@ -22,6 +22,69 @@
             box-sizing: border-box;
         }
 
+        /* ─── PASSWORD SCREEN ─── */
+        #passwordScreen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        #passwordScreen .pw-box {
+            background: white; border-radius: 16px; padding: 50px 40px; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 420px; width: 90%;
+        }
+        #passwordScreen h2 { color: var(--primary); margin-bottom: 8px; }
+        #passwordScreen p { color: #7f8c8d; margin-bottom: 25px; font-size: 0.95em; }
+        #passwordScreen input {
+            width: 100%; padding: 14px 18px; font-size: 1.1em; border: 2px solid #ddd;
+            border-radius: 8px; margin-bottom: 15px; text-align: center;
+            letter-spacing: 3px;
+        }
+        #passwordScreen input:focus { outline: none; border-color: var(--accent); }
+        #passwordScreen .pw-btn {
+            width: 100%; padding: 14px; background: var(--accent); color: white;
+            border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer;
+            font-weight: bold; transition: all 0.3s;
+        }
+        #passwordScreen .pw-btn:hover { background: #c0392b; }
+        #passwordScreen .pw-error { color: var(--danger); margin-top: 10px; display: none; font-size: 0.9em; }
+
+        /* ─── ATTENDANCE TAB STYLES ─── */
+        .attendance-panel { padding: 20px; }
+        .attendance-header { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .attendance-date-btn {
+            padding: 8px 16px; border-radius: 20px; border: 2px solid var(--primary);
+            cursor: pointer; font-size: 0.9em; transition: all 0.2s; background: white; color: var(--primary);
+        }
+        .attendance-date-btn.active { background: var(--primary); color: white; }
+        .attendance-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+        }
+        .attendance-card {
+            padding: 10px 14px; border-radius: 8px; border: 2px solid #e0e0e0;
+            display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;
+            font-size: 0.95em;
+        }
+        .attendance-card:hover { border-color: var(--primary); }
+        .attendance-card.present { background: #d5f4e6; border-color: var(--success); }
+        .attendance-card.absent { background: #fff; border-color: #e0e0e0; }
+        .attendance-card .att-photo {
+            width: 36px; height: 36px; border-radius: 50%; background: #95a5a6;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 0.8em; flex-shrink: 0;
+            object-fit: cover;
+        }
+        .attendance-card .att-check {
+            margin-left: auto; font-size: 1.3em;
+        }
+        .attendance-stats {
+            display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .attendance-stat-box {
+            padding: 15px 25px; border-radius: 8px; text-align: center; min-width: 120px;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -75,6 +138,8 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
 
         .upload-box:hover {
@@ -88,7 +153,21 @@
         }
 
         .upload-box input[type="file"] {
-            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .upload-box span,
+        .upload-box p {
+            position: relative;
+            z-index: 3;
+            pointer-events: none;
         }
 
         .upload-label {
@@ -375,13 +454,34 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Password Screen -->
+    <div id="passwordScreen">
+        <div class="pw-box">
+            <div style="font-size: 3em; margin-bottom: 15px;">📚🔒</div>
+            <h2>Student Dashboard</h2>
+            <p>Enter your password to continue</p>
+            <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="off">
+            <button class="pw-btn" id="passwordSubmit">Unlock Dashboard</button>
+            <div class="pw-error" id="passwordError">Incorrect password. Please try again.</div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display:none;">
         <div class="header">
-            <h1>📚 Student Class Dashboard</h1>
-            <p>Upload your data to generate insights about your students</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📚 Student Class Dashboard</h1>
+                    <p id="headerSubtitle">Upload your data to generate insights about your students</p>
+                </div>
+                <div id="headerControls" style="display: flex; gap: 10px; align-items: center;">
+                    <span id="roleIndicator" style="background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-size: 0.85em;"></span>
+                    <button id="settingsBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">⚙️ Settings</button>
+                    <button id="logoutBtn" class="btn" style="background: rgba(255,255,255,0.15); padding: 8px 16px; font-size: 0.85em; margin: 0;">🚪 Logout</button>
+                </div>
+            </div>
         </div>
 
-        <div class="upload-section">
+        <div class="upload-section" id="uploadSection">
             <h2>Step 1: Upload Your Data</h2>
             
             <div class="upload-grid">
@@ -415,17 +515,50 @@
                     <option value="black-political-thought">Black Political Thought</option>
                     <option value="undergrad-qual-methods">Undergraduate Qualitative Methods</option>
                     <option value="color-of-work">The Color of Work</option>
+                    <option value="labor-politics">Labor Politics</option>
                 </select>
             </div>
 
             <button class="btn" id="generateBtn" disabled>Generate Dashboard</button>
             <button class="btn" id="clearBtn" style="background: #95a5a6; margin-left: 10px;">Clear All Data</button>
             <button class="btn" id="cropPhotosBtn" style="background: #3498db; margin-left: 10px; display: none;">Crop Photos from Screenshot</button>
+            
+            <div style="margin-top: 10px;">
+                <label style="font-size: 0.9em; color: #e67e22; cursor: pointer;">
+                    <input type="checkbox" id="bypassDateFilter"> ⚠️ Include all dates (testing only — skips quarter filter)
+                </label>
+            </div>
+            
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #bdc3c7; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button class="btn" id="saveDashboardBtn" style="background: #8e44ad; display: none;">💾 Save Dashboard</button>
+                <button class="btn" id="loadDashboardBtn" style="background: #2980b9;">📂 Load Saved Dashboard</button>
+                <button class="btn" id="rosterOnlyBtn" style="background: #16a085;">📋 Roster Only (No Quiz)</button>
+                <span id="savedIndicator" style="display:none; color:#27ae60; font-weight:bold; font-size:0.9em;">✓ Saved</span>
+                <span style="flex:1;"></span>
+                <button class="btn" id="loadTestDataBtn" style="background: #e67e22; font-size: 0.85em; padding: 10px 18px;">🧪 Load Test Data</button>
+            </div>
+        </div>
+
+        <!-- TA Toolbar (visible when TA is logged in) -->
+        <div id="taToolbar" style="display: none; padding: 15px 30px; background: #eaf2f8; border-bottom: 1px solid #bdc3c7;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button class="btn" id="taCropPhotosBtn" style="background: #3498db; padding: 10px 18px; font-size: 0.9em; margin: 0;">📸 Crop Photos from Roster</button>
+                <input type="file" id="taPhotoScreenshot" accept="image/*" style="display:none;">
+                <span style="color: #7f8c8d; font-size: 0.9em;">Upload a screenshot of the photo roster, then crop individual student photos</span>
+            </div>
         </div>
 
         <div class="dashboard" id="dashboard">
             <div class="tabs" id="classTabs"></div>
             
+            <!-- View Switcher: Students vs Attendance -->
+            <div id="viewSwitcher" style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 3px solid #e0e0e0;">
+                <button class="tab active" id="viewStudentsTab" style="flex:1; text-align:center;">👥 Student Profiles</button>
+                <button class="tab" id="viewAttendanceTab" style="flex:1; text-align:center;">📋 Attendance</button>
+            </div>
+
+            <!-- Students View -->
+            <div id="studentsView">
             <div class="dashboard-grid">
                 <div class="students-panel">
                     <div class="panel">
@@ -452,6 +585,42 @@
                         <h2 class="panel-title">📊 Class Insights</h2>
                         <div id="insightsList"></div>
                     </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Attendance View -->
+            <div id="attendanceView" style="display: none;">
+                <div class="panel attendance-panel">
+                    <h2 class="panel-title">📋 Attendance & Participation Tracker</h2>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
+                        <button class="btn" id="addAttendanceDateBtn" style="background: var(--success); padding: 10px 18px; font-size: 0.9em; margin: 0;">+ New Session</button>
+                        <button class="btn" id="uploadPollEverywhereBtn" style="background: #9b59b6; padding: 10px 18px; font-size: 0.9em; margin: 0;">📊 Upload Poll Everywhere</button>
+                        <input type="file" id="pollEverywhereFile" accept=".csv,.xlsx,.xls" style="display:none;">
+                        <button class="btn" id="exportAttendanceBtn" style="background: var(--secondary); padding: 10px 18px; font-size: 0.9em; margin: 0;">📥 Export CSV</button>
+                    </div>
+
+                    <!-- Session type toggle -->
+                    <div style="display: flex; gap: 0; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; max-width: 300px;">
+                        <button id="attLectureToggle" style="flex:1; padding: 10px; border: none; cursor: pointer; font-weight: bold; background: var(--primary); color: white; transition: all 0.2s;">📖 Lecture</button>
+                        <button id="attSectionToggle" style="flex:1; padding: 10px; border: none; cursor: pointer; font-weight: bold; background: #f0f0f0; color: #666; transition: all 0.2s;">🗂 Section</button>
+                    </div>
+                    
+                    <div id="attendanceDates" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;"></div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
+                        <button class="btn" id="markAllPresentBtn" style="background: #16a085; padding: 8px 14px; font-size: 0.85em; margin: 0;">✓ Mark All Present</button>
+                        <button class="btn" id="markAllAbsentBtn" style="background: #95a5a6; padding: 8px 14px; font-size: 0.85em; margin: 0;">✗ Clear All</button>
+                        <div id="attSectionFilter" style="display: none; margin-left: 10px;"></div>
+                    </div>
+
+                    <div id="attendanceStats" class="attendance-stats"></div>
+                    
+                    <div id="attendanceGrid" class="attendance-grid"></div>
+
+                    <!-- Running totals table -->
+                    <div id="attendanceTotals" style="margin-top: 30px;"></div>
                 </div>
             </div>
         </div>
@@ -514,13 +683,349 @@
         </div>
     </div>
 
+    <!-- Ground Rules Modal -->
+    <div id="groundRulesModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto; padding:20px;">
+        <div style="max-width:900px; margin:50px auto; background:white; border-radius:12px; padding:30px; position:relative; max-height:85vh; display:flex; flex-direction:column;">
+            <button id="closeGroundRulesModal" style="position:absolute; top:20px; right:20px; background:#e74c3c; color:white; border:none; border-radius:50%; width:40px; height:40px; font-size:24px; cursor:pointer; line-height:1; z-index:10;">×</button>
+            <h2 style="margin-bottom:5px; color:#2C3E50;">📋 Class Ground Rules Generator</h2>
+            <p style="color:#7f8c8d; margin-bottom:20px; font-size:0.95em;">AI-synthesized from student pet peeves and suggested ground rules</p>
+            <div id="groundRulesContent" style="overflow-y:auto; flex:1;">
+                <div style="text-align:center; padding:40px; color:#95a5a6;">
+                    <div style="font-size:3em; margin-bottom:15px;">🤖</div>
+                    <p>Click "Generate Ground Rules" to synthesize student responses into class agreements.</p>
+                </div>
+            </div>
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:center;">
+                <button id="generateGroundRulesBtn" style="background:#E74C3C; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:1em; font-weight:bold;">✨ Generate Ground Rules</button>
+                <button id="copyGroundRulesBtn" style="display:none; background:#27AE60; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:1em;">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto; padding:20px;">
+        <div style="max-width:700px; margin:50px auto; background:white; border-radius:12px; padding:30px; position:relative;">
+            <button onclick="document.getElementById('settingsModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:#e74c3c; color:white; border:none; border-radius:50%; width:40px; height:40px; font-size:24px; cursor:pointer; line-height:1; z-index:10;">×</button>
+            <h2 style="margin-bottom:5px; color:#2C3E50;">⚙️ Dashboard Settings</h2>
+            <p style="color:#7f8c8d; margin-bottom:25px; font-size:0.95em;">Manage passwords and TA access</p>
+            
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--accent); padding-bottom: 8px;">🔑 Instructor Password</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="settingsAdminPw" placeholder="New instructor password" style="flex:1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <button id="saveAdminPwBtn" class="btn" style="margin:0; padding: 10px 20px; font-size: 0.9em;">Save</button>
+                </div>
+            </div>
+            
+            <div>
+                <h3 style="color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--accent); padding-bottom: 8px;">👩‍🏫 TA Access Passwords</h3>
+                <p style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 15px;">Set a password for each class to enable TA access. TAs enter this password to go directly to that class dashboard. Leave blank to disable TA access for a class.</p>
+                <div id="taPasswordList"></div>
+            </div>
+            
+            <div style="margin-top: 25px; text-align: center;">
+                <button id="saveAllSettingsBtn" class="btn" style="background: var(--success);">💾 Save All Settings</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // Dashboard state management
+        // ─── PASSWORD & AUTH ──────────────────────────────────────
+        // Settings are stored in localStorage:
+        //   dashboard_admin_hash  — SHA-256 of admin password
+        //   dashboard_ta_passwords — JSON: { classKey: hash }
+        // Default admin password: "bruins2026"
+        const DEFAULT_ADMIN_HASH = '7e4ad609b40e4edb9856879eae517685fb07b30570a8ee90f0243a20b8279f14';
+
+        let currentRole = null;  // 'admin' or 'ta'
+        let currentTAClass = null; // classKey if TA
+
+        async function hashPassword(pw) {
+            // crypto.subtle only works in secure contexts (HTTPS/localhost)
+            // For file:// protocol, use a simple hash fallback
+            if (window.crypto && window.crypto.subtle) {
+                try {
+                    const encoded = new TextEncoder().encode(pw);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+                    return [...new Uint8Array(hashBuffer)].map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+                } catch(e) {
+                    console.warn('crypto.subtle failed, using fallback hash');
+                }
+            }
+            // Fallback: simple string hash (for local file:// testing)
+            var hash = 0;
+            for (var i = 0; i < pw.length; i++) {
+                var chr = pw.charCodeAt(i);
+                hash = ((hash << 5) - hash) + chr;
+                hash |= 0;
+            }
+            return 'fallback_' + Math.abs(hash).toString(16);
+        }
+
+        function getAdminHash() {
+            return localStorage.getItem('dashboard_admin_hash') || DEFAULT_ADMIN_HASH;
+        }
+
+        function getTAPasswords() {
+            try { return JSON.parse(localStorage.getItem('dashboard_ta_passwords') || '{}'); }
+            catch(e) { return {}; }
+        }
+
+        // Check if already authenticated this session
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const isLocalFile = window.location.protocol === 'file:';
+        const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
+        
+        if (!isGitHubPages) {
+            // Local/preview: bypass password, go admin
+            document.getElementById('passwordScreen').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            currentRole = 'admin';
+            applyRole();
+        } else if (sessionStorage.getItem('dashboard_role')) {
+            document.getElementById('passwordScreen').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            currentRole = sessionStorage.getItem('dashboard_role');
+            currentTAClass = sessionStorage.getItem('dashboard_ta_class') || null;
+            applyRole();
+        }
+
+        document.getElementById('passwordSubmit').addEventListener('click', async () => {
+            const pw = document.getElementById('passwordInput').value;
+            const hash = await hashPassword(pw);
+            
+            // Check admin password first
+            if (hash === getAdminHash()) {
+                currentRole = 'admin';
+                currentTAClass = null;
+                sessionStorage.setItem('dashboard_role', 'admin');
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                applyRole();
+                return;
+            }
+            
+            // Check TA passwords
+            const taPasswords = getTAPasswords();
+            for (const [classKey, taHash] of Object.entries(taPasswords)) {
+                if (hash === taHash) {
+                    currentRole = 'ta';
+                    currentTAClass = classKey;
+                    sessionStorage.setItem('dashboard_role', 'ta');
+                    sessionStorage.setItem('dashboard_ta_class', classKey);
+                    document.getElementById('passwordScreen').style.display = 'none';
+                    document.getElementById('mainContainer').style.display = 'block';
+                    applyRole();
+                    return;
+                }
+            }
+            
+            // No match
+            document.getElementById('passwordError').style.display = 'block';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+        });
+
+        document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('passwordSubmit').click();
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('dashboard_role');
+            sessionStorage.removeItem('dashboard_ta_class');
+            currentRole = null;
+            currentTAClass = null;
+            location.reload();
+        });
+
+        function applyRole() {
+            const isAdmin = currentRole === 'admin';
+            const isTA = currentRole === 'ta';
+            
+            // Role indicator
+            const roleEl = document.getElementById('roleIndicator');
+            if (isAdmin) {
+                roleEl.textContent = '👑 Instructor';
+            } else if (isTA) {
+                const className = currentTAClass || '';
+                roleEl.textContent = '👩‍🏫 TA';
+            }
+            
+            // Admin-only elements
+            document.getElementById('uploadSection').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('settingsBtn').style.display = isAdmin ? 'inline-block' : 'none';
+            
+            // TA toolbar
+            document.getElementById('taToolbar').style.display = isTA ? 'block' : 'none';
+            
+            // Header subtitle
+            document.getElementById('headerSubtitle').textContent = isAdmin
+                ? 'Upload your data to generate insights about your students'
+                : 'Student profiles, attendance, and class insights';
+            
+            // If TA, auto-load saved dashboard for their class
+            if (isTA && currentTAClass) {
+                const raw = localStorage.getItem('dashboard_save');
+                if (raw) {
+                    try {
+                        const saveData = JSON.parse(raw);
+                        dashboardState.classes = saveData.classes || {};
+                        dashboardState.attendance = saveData.attendance || {};
+                        if (saveData.croppedPhotos) {
+                            photoCropperState.croppedPhotos = saveData.croppedPhotos;
+                            for (const cls of Object.values(dashboardState.classes)) {
+                                cls.students.forEach(s => {
+                                    if (photoCropperState.croppedPhotos[s.name]) s.photo = photoCropperState.croppedPhotos[s.name];
+                                });
+                            }
+                        }
+                        // Set to TA's assigned class
+                        if (dashboardState.classes[currentTAClass]) {
+                            dashboardState.currentClass = currentTAClass;
+                            renderDashboard();
+                            // Hide class tabs for TA (they only see their class)
+                            document.getElementById('classTabs').style.display = 'none';
+                        } else {
+                            alert('No saved data found for your class. Ask the instructor to save the dashboard first.');
+                        }
+                    } catch(e) {
+                        alert('Error loading dashboard: ' + e.message);
+                    }
+                } else {
+                    alert('No saved dashboard found. Ask the instructor to save the dashboard first.');
+                }
+            }
+        }
+
+        // ─── TA PHOTO CROPPER ────────────────────────────────────────
+        document.getElementById('taCropPhotosBtn').addEventListener('click', () => {
+            document.getElementById('taPhotoScreenshot').click();
+        });
+
+        document.getElementById('taPhotoScreenshot').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            // Store the file and open the cropper
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) {
+                alert('No class data loaded.');
+                return;
+            }
+            
+            // Load into photo cropper using the same flow
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    photoCropperState.image = img;
+                    
+                    // Populate student dropdown - use section filter if available
+                    const studentSelect = document.getElementById('studentNameSelect');
+                    studentSelect.innerHTML = '<option value="">Choose student...</option>';
+                    const allStudentNames = currentData.students.map(s => s.name);
+                    if (currentData.missingStudents) allStudentNames.push(...currentData.missingStudents);
+                    allStudentNames.sort().forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        studentSelect.appendChild(option);
+                    });
+                    photoCropperState.studentsList = allStudentNames;
+                    
+                    initializeCropperCanvas();
+                    document.getElementById('photoCropperModal').style.display = 'block';
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ─── SETTINGS MODAL ─────────────────────────────────────────
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            openSettingsModal();
+        });
+
+        // Settings modal - click outside to close
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') document.getElementById('settingsModal').style.display = 'none';
+        });
+
+        function openSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'block';
+            
+            // Populate TA password list
+            const container = document.getElementById('taPasswordList');
+            const taPasswords = getTAPasswords();
+            const classes = [
+                { key: 'grad-qual-methods', name: 'Graduate Qualitative Methods' },
+                { key: 'black-political-thought', name: 'Black Political Thought' },
+                { key: 'undergrad-qual-methods', name: 'Undergraduate Qualitative Methods' },
+                { key: 'color-of-work', name: 'The Color of Work' },
+                { key: 'labor-politics', name: 'Labor Politics' }
+            ];
+            
+            container.innerHTML = classes.map(cls => {
+                const hasPassword = !!taPasswords[cls.key];
+                return `
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; padding: 12px; background: ${hasPassword ? '#d5f4e6' : '#f8f9fa'}; border-radius: 8px;">
+                        <div style="flex: 1;">
+                            <strong style="font-size: 0.95em;">${cls.name}</strong>
+                            ${hasPassword ? '<span style="color: #27ae60; font-size: 0.8em; margin-left: 8px;">✓ TA access enabled</span>' : '<span style="color: #95a5a6; font-size: 0.8em; margin-left: 8px;">No TA access</span>'}
+                        </div>
+                        <input type="password" class="ta-pw-input" data-class="${cls.key}" placeholder="${hasPassword ? '••••••' : 'Set TA password...'}" style="width: 180px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                        ${hasPassword ? `<button class="btn ta-pw-clear" data-class="${cls.key}" style="margin:0; padding: 6px 12px; font-size: 0.8em; background: #95a5a6;">Clear</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Add clear button handlers
+            container.querySelectorAll('.ta-pw-clear').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const classKey = btn.dataset.class;
+                    const taPasswords = getTAPasswords();
+                    delete taPasswords[classKey];
+                    localStorage.setItem('dashboard_ta_passwords', JSON.stringify(taPasswords));
+                    openSettingsModal(); // refresh
+                });
+            });
+        }
+
+        document.getElementById('saveAdminPwBtn').addEventListener('click', async () => {
+            const pw = document.getElementById('settingsAdminPw').value;
+            if (!pw || pw.length < 4) { alert('Password must be at least 4 characters.'); return; }
+            const hash = await hashPassword(pw);
+            localStorage.setItem('dashboard_admin_hash', hash);
+            document.getElementById('settingsAdminPw').value = '';
+            alert('Instructor password updated!');
+        });
+
+        document.getElementById('saveAllSettingsBtn').addEventListener('click', async () => {
+            const taPasswords = getTAPasswords();
+            const inputs = document.querySelectorAll('.ta-pw-input');
+            for (const input of inputs) {
+                const pw = input.value.trim();
+                const classKey = input.dataset.class;
+                if (pw && pw.length >= 4) {
+                    taPasswords[classKey] = await hashPassword(pw);
+                } else if (pw && pw.length < 4) {
+                    alert(`Password for ${classKey} must be at least 4 characters.`);
+                    return;
+                }
+                // If empty, leave existing password unchanged
+            }
+            localStorage.setItem('dashboard_ta_passwords', JSON.stringify(taPasswords));
+            alert('Settings saved!');
+            openSettingsModal(); // refresh to show updated state
+        });
+
+        // ─── DASHBOARD STATE ─────────────────────────────────────────
         const dashboardState = {
             classes: {},
-            currentClass: null
+            currentClass: null,
+            attendance: {} // { classKey: { dates: ['2026-04-01', ...], records: { '2026-04-01': { 'Student Name': true/false } } } }
         };
         
         // Photo cropper state
@@ -537,20 +1042,605 @@
             studentsList: []
         };
 
-        // File upload handlers
-        document.getElementById('quizUploadBox').addEventListener('click', () => {
-            document.getElementById('quizFile').click();
+        // ─── VIEW SWITCHING (Students vs Attendance) ─────────────────
+        document.getElementById('viewStudentsTab').addEventListener('click', () => {
+            document.getElementById('viewStudentsTab').classList.add('active');
+            document.getElementById('viewAttendanceTab').classList.remove('active');
+            document.getElementById('studentsView').style.display = 'block';
+            document.getElementById('attendanceView').style.display = 'none';
         });
 
-        document.getElementById('rosterUploadBox').addEventListener('click', () => {
-            document.getElementById('rosterFile').click();
+        document.getElementById('viewAttendanceTab').addEventListener('click', () => {
+            document.getElementById('viewAttendanceTab').classList.add('active');
+            document.getElementById('viewStudentsTab').classList.remove('active');
+            document.getElementById('studentsView').style.display = 'none';
+            document.getElementById('attendanceView').style.display = 'block';
+            renderAttendance();
         });
 
+        // ─── SAVE / LOAD DASHBOARD ───────────────────────────────────
+        // Reusable save function
+        function saveDashboardToStorage() {
+            try {
+                const saveData = {
+                    version: 2,
+                    savedAt: new Date().toISOString(),
+                    classes: {},
+                    attendance: dashboardState.attendance,
+                    croppedPhotos: photoCropperState.croppedPhotos
+                };
+                for (const [key, cls] of Object.entries(dashboardState.classes)) {
+                    saveData.classes[key] = {
+                        name: cls.name,
+                        students: cls.students,
+                        insights: cls.insights,
+                        rosterTotal: cls.rosterTotal,
+                        originalRosterTotal: cls.originalRosterTotal,
+                        missingStudents: cls.missingStudents,
+                        quizOnlyStudents: cls.quizOnlyStudents,
+                        sections: cls.sections,
+                        currentSection: cls.currentSection,
+                        isUndergrad: cls.isUndergrad
+                    };
+                }
+                localStorage.setItem('dashboard_save', JSON.stringify(saveData));
+                return true;
+            } catch (err) {
+                console.error('Save error:', err);
+                return false;
+            }
+        }
+
+        // Auto-save after TA or admin changes (debounced)
+        let autoSaveTimeout = null;
+        function autoSave() {
+            if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveDashboardToStorage();
+                console.log('Auto-saved dashboard');
+            }, 1000);
+        }
+
+        document.getElementById('saveDashboardBtn').addEventListener('click', () => {
+            if (saveDashboardToStorage()) {
+                const ind = document.getElementById('savedIndicator');
+                ind.style.display = 'inline';
+                ind.textContent = `✓ Saved ${new Date().toLocaleTimeString()}`;
+                setTimeout(() => { ind.style.display = 'none'; }, 3000);
+            } else {
+                alert('Error saving. Data may be too large for localStorage.');
+            }
+        });
+
+        document.getElementById('loadDashboardBtn').addEventListener('click', () => {
+            const raw = localStorage.getItem('dashboard_save');
+            if (!raw) {
+                alert('No saved dashboard found. Generate a dashboard first, then click Save.');
+                return;
+            }
+            try {
+                const saveData = JSON.parse(raw);
+                dashboardState.classes = saveData.classes;
+                dashboardState.attendance = saveData.attendance || {};
+                if (saveData.croppedPhotos) {
+                    photoCropperState.croppedPhotos = saveData.croppedPhotos;
+                    // Re-apply photos to student objects
+                    for (const cls of Object.values(dashboardState.classes)) {
+                        cls.students.forEach(s => {
+                            if (photoCropperState.croppedPhotos[s.name]) {
+                                s.photo = photoCropperState.croppedPhotos[s.name];
+                            }
+                        });
+                    }
+                }
+                // Set current class to first available
+                const classKeys = Object.keys(dashboardState.classes);
+                if (classKeys.length > 0) {
+                    dashboardState.currentClass = classKeys[0];
+                    renderDashboard();
+                    document.getElementById('saveDashboardBtn').style.display = 'inline-block';
+                    alert(`Loaded dashboard saved on ${new Date(saveData.savedAt).toLocaleString()}\n${classKeys.length} class(es): ${classKeys.map(k => dashboardState.classes[k].name).join(', ')}`);
+                }
+            } catch (err) {
+                alert('Error loading saved data: ' + err.message);
+            }
+        });
+
+        // ─── ROSTER ONLY MODE ────────────────────────────────────────
+        document.getElementById('rosterOnlyBtn').addEventListener('click', async () => {
+            const rosterFile = document.getElementById('rosterFile').files[0];
+            const className = document.getElementById('classSelect').value;
+            if (!rosterFile || !className) {
+                alert('Please upload a roster PDF and select a class first.');
+                return;
+            }
+            try {
+                const rosterData = await parseRosterPDF(rosterFile);
+                const classLabel = document.getElementById('classSelect').selectedOptions[0].text;
+                const rosterNames = rosterData.students.map(r => parseRosterName(r));
+
+                dashboardState.classes[className] = {
+                    name: classLabel,
+                    students: [],
+                    insights: { policyInterests: {}, policyInterestStudents: {}, majors: {}, hopes: [], fears: [], challenges: [], petPeeves: [], groundRuleSuggestions: [], actionableInsights: [], responsibilities: {}, supportNeeds: [], priorQualExpStudents: [] },
+                    rosterTotal: rosterData.students.length,
+                    originalRosterTotal: rosterData.students.length,
+                    missingStudents: rosterNames,
+                    quizOnlyStudents: [],
+                    sections: [],
+                    currentSection: 'all',
+                    isUndergrad: className === 'undergrad-qual-methods'
+                };
+
+                dashboardState.currentClass = className;
+                renderDashboard();
+                document.getElementById('saveDashboardBtn').style.display = 'inline-block';
+                
+                const photoScreenshot = document.getElementById('photoScreenshot').files[0];
+                if (photoScreenshot) {
+                    document.getElementById('cropPhotosBtn').style.display = 'inline-block';
+                }
+                
+                alert(`Roster loaded: ${rosterNames.length} students. All shown as "Missing Quiz" — you can start cropping photos and adding notes now. When quiz data comes in, generate the full dashboard.`);
+            } catch (err) {
+                alert('Error: ' + err.message);
+                console.error(err);
+            }
+        });
+
+        // ─── LOAD TEST DATA ──────────────────────────────────────────
+        document.getElementById('loadTestDataBtn').addEventListener('click', () => {
+            loadTestData();
+        });
+
+        function loadTestData() {
+            const sections = ['1A', '1B', '1C', '1D', '1E'];
+            const firstNames = ['Maya', 'Jordan', 'Aisha', 'Carlos', 'Priya', 'Tyler', 'Kenji', 'Sophia', 'Marcus', 'Elena', 'David', 'Fatima', 'Noah', 'Luna', 'Isaiah', 'Grace', 'Andre', 'Mei', 'Jasmine', 'Elijah', 'Zoe', 'Kai', 'Amara', 'Liam', 'Sara', 'Omar', 'Chloe', 'Dante', 'Nadia', 'Theo'];
+            const lastNames = ['Johnson', 'Chen', 'Williams', 'Garcia', 'Patel', 'Brown', 'Kim', 'Torres', 'Washington', 'Nakamura', 'Rivera', 'Hassan', 'Lee', 'Okafor', 'Martinez', 'Singh', 'Robinson', 'Chang', 'Adams', 'Thompson', 'Wright', 'Morales', 'Diallo', 'Scott', 'Ahmad', 'Campbell', 'Park', 'Foster', 'Youssef', 'Burke'];
+            const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+            const policyAreas = ['Education', 'Housing & Urban Development', 'Health & Healthcare', 'Criminal Justice', 'Immigration', 'Labor & Employment', 'Environment & Climate', 'Race, Equity & Civil Rights', 'Economic Inequality & Poverty', 'Technology & Innovation'];
+            const petPeeves = [
+                'people are on their phones the whole time',
+                'one person dominates the discussion',
+                'the professor cold-calls students',
+                'people talk over each other',
+                'no one participates and it\'s awkward silence',
+                'people come in late and disrupt class',
+                'side conversations during lecture',
+                'people don\'t do the reading and waste everyone\'s time',
+                'groupwork where one person does everything',
+                'the professor goes off on tangents'
+            ];
+            const groundRules = [
+                'Raise hands before speaking',
+                'Be respectful of different viewpoints',
+                'Put phones away during discussion',
+                'Come to class having done the reading',
+                'Don\'t interrupt others',
+                'Be on time',
+                'Create space for quieter voices',
+                'What\'s said in class stays in class',
+                'Use "I" statements',
+                'Challenge ideas not people'
+            ];
+            const responsibilities = ['Working part-time', 'Heavy Course Load', 'Working part-time, Heavy Course Load', 'Caring for adults', 'Working full-time', 'Heavy Course Load, Working part-time'];
+            const challenges = [
+                'Balancing work and school is really stressful',
+                'I have anxiety about speaking in class',
+                'Financial stress — not sure I can afford textbooks',
+                'Family health issues back home',
+                'Adjusting to college life as a first-gen student',
+                '',
+                '',
+                'Dealing with a heavy course load this quarter',
+                '',
+                'I struggle with time management'
+            ];
+            const qualExp = [
+                'Conducted interviews for a research project last summer',
+                'Took a sociology methods class that covered qualitative approaches',
+                '',
+                '',
+                'Participated in focus groups as part of a community organization',
+                '',
+                'No formal experience but interested in learning',
+                '',
+                '',
+                'Did ethnographic fieldwork for an anthropology class'
+            ];
+
+            const students = [];
+            const rosterNames = [];
+            for (let i = 0; i < 30; i++) {
+                const name = firstNames[i] + ' ' + lastNames[i];
+                const sec = sections[i % 5];
+                rosterNames.push(name);
+                students.push({
+                    name: name,
+                    preferredName: i % 7 === 0 ? firstNames[i].substring(0, 3) : '',
+                    section: `DIS ${sec} - W ${9 + (i % 3)}:00A-${9 + (i % 3)}:50A ROLFE 3129`,
+                    photo: null,
+                    pronunciation: i % 4 === 0 ? firstNames[i].toUpperCase().split('').join('-') : '',
+                    pronouns: ['she/her', 'he/him', 'they/them', 'she/her', 'he/him'][i % 5],
+                    major: years[i % 4],
+                    policyInterests: [policyAreas[i % 10], policyAreas[(i + 3) % 10], policyAreas[(i + 6) % 10]].join(', '),
+                    hopes: '',
+                    fears: '',
+                    responsibilities: responsibilities[i % responsibilities.length],
+                    challenges: challenges[i % challenges.length],
+                    additionalInfo: '',
+                    priorQualExp: qualExp[i % qualExp.length],
+                    petPeeve: petPeeves[i % petPeeves.length],
+                    groundRuleSuggestion: groundRules[i % groundRules.length],
+                    riskLevel: challenges[i % challenges.length].length > 50 ? 'high' : challenges[i % challenges.length].length > 10 ? 'medium' : 'low',
+                    riskSummary: challenges[i % challenges.length] || 'No major concerns noted',
+                    isUndergrad: true
+                });
+            }
+
+            // Add 3 extra roster-only students (missing quiz)
+            const missingStudents = ['Alex Ramirez', 'Brianna Foster', 'Chris Delgado'];
+
+            // Gather sections from quiz data
+            const sectionCodes = [...new Set(students.map(s => {
+                const m = s.section.match(/DIS\s+(1[A-E])/i);
+                return m ? m[1].toUpperCase() : '';
+            }).filter(Boolean))].sort();
+
+            // Generate insights from student data
+            const syntheticQuizData = students.map(s => ({
+                'First and Last Name': s.name,
+                'What are your top 3 policy interest areas? ': s.policyInterests,
+                "What's one hope you have for this class? ": s.hopes,
+                "What's one fear you have for this class? ": s.fears,
+                'What sorts of responsibilities do you have outside of this class? ': s.responsibilities,
+                'Year and Major': s.major,
+                'Year at UCLA? (Select all that apply)': s.major,
+                'What section are you in?': s.section,
+                'Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)': s.priorQualExp,
+                'Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"': s.petPeeve,
+                "What's a ground rule for our class you'd like to suggest.": s.groundRuleSuggestion,
+                "Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for the teaching team only.)": s.challenges
+            }));
+
+            dashboardState.classes['undergrad-qual-methods'] = {
+                name: 'Undergraduate Qualitative Methods',
+                students: students,
+                insights: generateInsights(syntheticQuizData),
+                rosterTotal: 33,
+                originalRosterTotal: 33,
+                missingStudents: missingStudents,
+                quizOnlyStudents: [],
+                sections: sectionCodes,
+                currentSection: 'all',
+                isUndergrad: true
+            };
+
+            dashboardState.currentClass = 'undergrad-qual-methods';
+            renderDashboard();
+            document.getElementById('saveDashboardBtn').style.display = 'inline-block';
+            alert('Test data loaded: 30 students across 5 sections with pet peeves, ground rules, and 3 missing students.');
+        }
+
+        // ─── ATTENDANCE SYSTEM ───────────────────────────────────────
+        function getAttendanceData() {
+            const cls = dashboardState.currentClass;
+            if (!cls) return null;
+            if (!dashboardState.attendance[cls]) {
+                dashboardState.attendance[cls] = { dates: [], records: {}, activeDate: null };
+            }
+            return dashboardState.attendance[cls];
+        }
+
+        function getAllStudentNames() {
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) return [];
+            const names = currentData.students.map(s => s.name);
+            if (currentData.missingStudents) names.push(...currentData.missingStudents);
+            return names.sort();
+        }
+
+        document.getElementById('addAttendanceDateBtn').addEventListener('click', () => {
+            const att = getAttendanceData();
+            if (!att) return;
+            const today = new Date().toISOString().split('T')[0];
+            const dateStr = prompt('Enter date for this session (YYYY-MM-DD):', today);
+            if (!dateStr) return;
+            // Ask session type
+            const sessionType = prompt('Session type? Enter "lecture" or "section":', 'lecture');
+            if (!sessionType || !['lecture', 'section'].includes(sessionType.toLowerCase().trim())) {
+                alert('Please enter "lecture" or "section".');
+                return;
+            }
+            const key = dateStr + '|' + sessionType.toLowerCase().trim();
+            if (att.dates.includes(key)) {
+                att.activeDate = key;
+                renderAttendance();
+                return;
+            }
+            att.dates.push(key);
+            att.dates.sort();
+            att.records[key] = {};
+            getAllStudentNames().forEach(name => { att.records[key][name] = false; });
+            att.activeDate = key;
+            renderAttendance();
+        });
+
+        document.getElementById('uploadPollEverywhereBtn').addEventListener('click', () => {
+            document.getElementById('pollEverywhereFile').click();
+        });
+
+        document.getElementById('pollEverywhereFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const att = getAttendanceData();
+            if (!att || !att.activeDate) {
+                alert('Please create or select an attendance session first.');
+                return;
+            }
+            try {
+                const data = await parsePollEverywhereFile(file);
+                const allNames = getAllStudentNames();
+                let matched = 0;
+                data.forEach(pollName => {
+                    // Fuzzy match poll name to roster
+                    const normalizedPoll = normalizeName(pollName);
+                    const pollParts = normalizedPoll.split(' ').filter(p => p.length > 0);
+                    for (const rosterName of allNames) {
+                        const normalizedRoster = normalizeName(rosterName);
+                        const rosterParts = normalizedRoster.split(' ').filter(p => p.length > 0);
+                        let matchCount = 0;
+                        for (const pp of pollParts) {
+                            for (const rp of rosterParts) {
+                                if (namesMatch(pp, rp)) { matchCount++; break; }
+                            }
+                        }
+                        if (matchCount >= 2) {
+                            att.records[att.activeDate][rosterName] = true;
+                            matched++;
+                            break;
+                        }
+                    }
+                });
+                renderAttendance();
+                autoSave();
+                alert(`Poll Everywhere: matched ${matched} of ${data.length} participants to your roster.`);
+            } catch (err) {
+                alert('Error parsing file: ' + err.message);
+            }
+            e.target.value = '';
+        });
+
+        async function parsePollEverywhereFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        
+                        // Try to find a name column — look for headers containing "name", "participant", "student"
+                        const header = rows[0] || [];
+                        let nameCol = -1;
+                        for (let i = 0; i < header.length; i++) {
+                            const h = String(header[i]).toLowerCase();
+                            if (h.includes('name') || h.includes('participant') || h.includes('student') || h.includes('first') || h.includes('screen')) {
+                                nameCol = i;
+                                break;
+                            }
+                        }
+                        
+                        // If no header match, check if col 0 or 1 has names
+                        if (nameCol === -1) {
+                            // Heuristic: if row 1 col 0 has a space (first last), use it
+                            if (rows.length > 1 && String(rows[1][0] || '').includes(' ')) nameCol = 0;
+                            else if (rows.length > 1 && String(rows[1][1] || '').includes(' ')) nameCol = 1;
+                            else nameCol = 0; // fallback
+                        }
+                        
+                        // Also check for first+last in separate columns
+                        let firstCol = -1, lastCol = -1;
+                        for (let i = 0; i < header.length; i++) {
+                            const h = String(header[i]).toLowerCase();
+                            if (h === 'first name' || h === 'first') firstCol = i;
+                            if (h === 'last name' || h === 'last') lastCol = i;
+                        }
+                        
+                        const names = [];
+                        for (let r = 1; r < rows.length; r++) {
+                            let name;
+                            if (firstCol >= 0 && lastCol >= 0) {
+                                name = ((rows[r][firstCol] || '') + ' ' + (rows[r][lastCol] || '')).trim();
+                            } else {
+                                name = String(rows[r][nameCol] || '').trim();
+                            }
+                            if (name && name.length > 2) names.push(name);
+                        }
+                        resolve(names);
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        document.getElementById('markAllPresentBtn').addEventListener('click', () => {
+            const att = getAttendanceData();
+            if (!att || !att.activeDate) return;
+            getAllStudentNames().forEach(name => { att.records[att.activeDate][name] = true; });
+            autoSave();
+            renderAttendance();
+        });
+
+        document.getElementById('markAllAbsentBtn').addEventListener('click', () => {
+            const att = getAttendanceData();
+            if (!att || !att.activeDate) return;
+            getAllStudentNames().forEach(name => { att.records[att.activeDate][name] = false; });
+            autoSave();
+            renderAttendance();
+        });
+
+        document.getElementById('exportAttendanceBtn').addEventListener('click', () => {
+            const att = getAttendanceData();
+            if (!att || att.dates.length === 0) { alert('No attendance data to export.'); return; }
+            const names = getAllStudentNames();
+            
+            // Build header with session type labels
+            const dateHeaders = att.dates.map(d => {
+                const parts = d.split('|');
+                const type = (parts[1] || 'lecture').charAt(0).toUpperCase();
+                return `${type}-${parts[0]}`;
+            });
+            
+            const lectureDates = att.dates.filter(d => (d.split('|')[1] || 'lecture') === 'lecture');
+            const sectionDates = att.dates.filter(d => (d.split('|')[1] || '') === 'section');
+            
+            let csv = 'Student,' + dateHeaders.join(',') + ',Lecture Present,Lecture Total,Section Present,Section Total,Total Points\n';
+            names.forEach(name => {
+                const row = ['"' + name + '"'];
+                let lecturePresent = 0, sectionPresent = 0;
+                att.dates.forEach(d => {
+                    const val = att.records[d] && att.records[d][name] ? 'P' : 'A';
+                    row.push(val);
+                    if (val === 'P') {
+                        const type = (d.split('|')[1] || 'lecture');
+                        if (type === 'lecture') lecturePresent++;
+                        else sectionPresent++;
+                    }
+                });
+                row.push(lecturePresent);
+                row.push(lectureDates.length);
+                row.push(sectionPresent);
+                row.push(sectionDates.length);
+                row.push(lecturePresent + sectionPresent);
+                csv += row.join(',') + '\n';
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_${dashboardState.currentClass}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        function renderAttendance() {
+            const att = getAttendanceData();
+            if (!att) return;
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) return;
+
+            // Date tabs
+            const datesEl = document.getElementById('attendanceDates');
+            datesEl.innerHTML = '';
+            if (att.dates.length === 0) {
+                datesEl.innerHTML = '<div style="color: #7f8c8d; padding: 10px;">No sessions yet. Click "+ New Session" to start tracking attendance.</div>';
+            }
+            att.dates.forEach(d => {
+                const btn = document.createElement('button');
+                btn.className = 'attendance-date-btn' + (d === att.activeDate ? ' active' : '');
+                // Parse date|type format
+                const parts = d.split('|');
+                const dateStr = parts[0];
+                const sessionType = parts[1] || 'lecture';
+                const dateObj = new Date(dateStr + 'T12:00:00');
+                const typeLabel = sessionType === 'section' ? '§' : '🎓';
+                btn.textContent = `${typeLabel} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                btn.title = `${dateStr} — ${sessionType}`;
+                btn.style.cssText += sessionType === 'section' ? 'border-color:#3498db;' : '';
+                if (d === att.activeDate) {
+                    btn.style.background = sessionType === 'section' ? '#3498db' : 'var(--primary)';
+                }
+                btn.addEventListener('click', () => { att.activeDate = d; renderAttendance(); });
+                
+                // Delete on right-click
+                btn.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    if (confirm(`Delete attendance for ${d}?`)) {
+                        att.dates = att.dates.filter(x => x !== d);
+                        delete att.records[d];
+                        if (att.activeDate === d) att.activeDate = att.dates[att.dates.length - 1] || null;
+                        renderAttendance();
+                    }
+                });
+                datesEl.appendChild(btn);
+            });
+
+            // Stats
+            const statsEl = document.getElementById('attendanceStats');
+            const gridEl = document.getElementById('attendanceGrid');
+            if (!att.activeDate) {
+                statsEl.innerHTML = '';
+                gridEl.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 40px;">Select or create a session to view attendance.</div>';
+                return;
+            }
+
+            const names = getAllStudentNames();
+            const records = att.records[att.activeDate] || {};
+            // Ensure all names exist
+            names.forEach(n => { if (records[n] === undefined) records[n] = false; });
+            const presentCount = names.filter(n => records[n]).length;
+            const absentCount = names.length - presentCount;
+            const activeType = (att.activeDate.split('|')[1] || 'lecture');
+            const typeEmoji = activeType === 'section' ? '§' : '🎓';
+            const activeDate = att.activeDate.split('|')[0];
+
+            statsEl.innerHTML = `
+                <div class="attendance-stat-box" style="background: #e3f2fd; color: #2980b9;">
+                    <div style="font-size: 1.2em; font-weight: bold;">${typeEmoji} ${activeType.charAt(0).toUpperCase() + activeType.slice(1)}</div>
+                    <div>${new Date(activeDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                </div>
+                <div class="attendance-stat-box" style="background: #d5f4e6; color: #27ae60;">
+                    <div style="font-size: 2em; font-weight: bold;">${presentCount}</div>
+                    <div>Present</div>
+                </div>
+                <div class="attendance-stat-box" style="background: #ffe5e5; color: #e74c3c;">
+                    <div style="font-size: 2em; font-weight: bold;">${absentCount}</div>
+                    <div>Absent</div>
+                </div>
+                <div class="attendance-stat-box" style="background: #e3f2fd; color: #2980b9;">
+                    <div style="font-size: 2em; font-weight: bold;">${names.length > 0 ? Math.round(presentCount / names.length * 100) : 0}%</div>
+                    <div>Rate</div>
+                </div>
+            `;
+
+            // Grid
+            gridEl.innerHTML = '';
+            names.forEach(name => {
+                const isPresent = records[name];
+                const card = document.createElement('div');
+                card.className = 'attendance-card ' + (isPresent ? 'present' : 'absent');
+                
+                const student = currentData.students.find(s => s.name === name);
+                const photo = (student && student.photo) || photoCropperState.croppedPhotos[name];
+                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                const photoHTML = photo
+                    ? `<img class="att-photo" src="${photo}" alt="${name}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+                    : `<div class="att-photo">${initials}</div>`;
+
+                card.innerHTML = `
+                    ${photoHTML}
+                    <span style="flex:1; ${isPresent ? '' : 'opacity:0.6;'}">${student && student.preferredName ? student.preferredName : name.split(' ')[0]} ${name.split(' ').slice(-1)[0]}</span>
+                    <span class="att-check">${isPresent ? '✅' : '⬜'}</span>
+                `;
+                card.addEventListener('click', () => {
+                    records[name] = !records[name];
+                    autoSave();
+                    renderAttendance();
+                });
+                gridEl.appendChild(card);
+            });
+        }
+
+        // File input change handlers
         document.getElementById('quizFile').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                document.getElementById('quizFileName').textContent = `✓ ${file.name}`;
-                document.getElementById('quizUploadBox').classList.add('active');
+                document.getElementById('quizFileName').textContent = '\u2713 ' + file.name;
+                document.getElementById('quizUploadBox').style.borderColor = '#27ae60';
+                document.getElementById('quizUploadBox').style.background = '#d5f4e6';
                 checkReadyToGenerate();
             }
         });
@@ -558,14 +1648,11 @@
         document.getElementById('rosterFile').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                document.getElementById('rosterFileName').textContent = `✓ ${file.name}`;
-                document.getElementById('rosterUploadBox').classList.add('active');
+                document.getElementById('rosterFileName').textContent = '\u2713 ' + file.name;
+                document.getElementById('rosterUploadBox').style.borderColor = '#27ae60';
+                document.getElementById('rosterUploadBox').style.background = '#d5f4e6';
                 checkReadyToGenerate();
             }
-        });
-
-        document.getElementById('photoScreenshotBox').addEventListener('click', () => {
-            document.getElementById('photoScreenshot').click();
         });
 
         document.getElementById('photoScreenshot').addEventListener('change', (e) => {
@@ -604,11 +1691,10 @@
 
         function checkReadyToGenerate() {
             const quizFile = document.getElementById('quizFile').files[0];
-            const rosterFile = document.getElementById('rosterFile').files[0];
             const classSelected = document.getElementById('classSelect').value;
             
             const generateBtn = document.getElementById('generateBtn');
-            generateBtn.disabled = !(quizFile && rosterFile && classSelected);
+            generateBtn.disabled = !(quizFile && classSelected);
         }
 
         // Generate dashboard
@@ -622,49 +1708,53 @@
                 const quizData = await parseQuizFile(quizFile);
                 
                 console.log('Quiz data after filtering:', quizData);
-                alert(`Loaded quiz data: ${quizData.length} students found for current quarter`);
+                alert(`Loaded quiz data: ${quizData.length} students found${document.getElementById('bypassDateFilter').checked ? ' (date filter bypassed)' : ' for current quarter'}`);
                 
-                // Parse roster data
-                const rosterData = await parseRosterPDF(rosterFile);
+                // Parse roster data (optional)
+                let rosterData = { students: [], photos: [] };
+                if (rosterFile) {
+                    rosterData = await parseRosterPDF(rosterFile);
+                }
                 
                 // Process and store
                 const processedStudents = matchAndProcessData(quizData, rosterData);
                 
-                // Find students who took quiz but aren't on roster
+                // Find students who took quiz but aren't on roster (only if roster provided)
                 const quizOnlyStudents = [];
-                const rosterNamesNormalized = rosterData.students.map(r => {
-                    const parsed = parseRosterName(r);
-                    const normalized = normalizeName(parsed);
-                    return normalized.split(' ').filter(p => p.length > 0);
-                });
-                
-                quizData.forEach(response => {
-                    const quizName = response['First and Last Name'] || '';
-                    const normalizedQuiz = normalizeName(quizName);
-                    const quizParts = normalizedQuiz.split(' ').filter(p => p.length > 0);
+                if (rosterData.students.length > 0) {
+                    const rosterNamesNormalized = rosterData.students.map(r => {
+                        const parsed = parseRosterName(r);
+                        const normalized = normalizeName(parsed);
+                        return normalized.split(' ').filter(p => p.length > 0);
+                    });
                     
-                    // Check if this quiz taker matches any roster name
-                    let foundOnRoster = false;
-                    for (const rosterParts of rosterNamesNormalized) {
-                        let matchCount = 0;
-                        for (const quizPart of quizParts) {
-                            for (const rosterPart of rosterParts) {
-                                if (namesMatch(quizPart, rosterPart)) {
-                                    matchCount++;
-                                    break;
+                    quizData.forEach(response => {
+                        const quizName = response['First and Last Name'] || '';
+                        const normalizedQuiz = normalizeName(quizName);
+                        const quizParts = normalizedQuiz.split(' ').filter(p => p.length > 0);
+                        
+                        let foundOnRoster = false;
+                        for (const rosterParts of rosterNamesNormalized) {
+                            let matchCount = 0;
+                            for (const quizPart of quizParts) {
+                                for (const rosterPart of rosterParts) {
+                                    if (namesMatch(quizPart, rosterPart)) {
+                                        matchCount++;
+                                        break;
+                                    }
                                 }
                             }
+                            if (matchCount >= 2) {
+                                foundOnRoster = true;
+                                break;
+                            }
                         }
-                        if (matchCount >= 2) {
-                            foundOnRoster = true;
-                            break;
+                        
+                        if (!foundOnRoster) {
+                            quizOnlyStudents.push(quizName);
                         }
-                    }
-                    
-                    if (!foundOnRoster) {
-                        quizOnlyStudents.push(quizName);
-                    }
-                });
+                    });
+                }
                 
                 console.log('Students who took quiz but not on roster:', quizOnlyStudents);
                 
@@ -673,17 +1763,18 @@
                     .map(r => r['What section are you in?'])
                     .filter(s => s && s.trim())
                     .map(s => {
-                        const m = s.match(/DIS\s+(1[A-E])/i);
-                        return m ? m[1].toUpperCase() : s.trim();
+                        const m = s.match(/1[A-E]/i);
+                        return m ? m[0].toUpperCase() : null;
                     })
+                    .filter(Boolean)
                 )].sort();
 
                 dashboardState.classes[className] = {
                     name: document.getElementById('classSelect').selectedOptions[0].text,
                     students: processedStudents,
                     insights: generateInsights(quizData),
-                    rosterTotal: rosterData.students.length,
-                    originalRosterTotal: rosterData.students.length,
+                    rosterTotal: rosterData.students.length || processedStudents.length,
+                    originalRosterTotal: rosterData.students.length || processedStudents.length,
                     missingStudents: dashboardState.classes[className]?.missingStudents || [],
                     quizOnlyStudents: quizOnlyStudents,
                     sections: sections,
@@ -696,6 +1787,9 @@
                 
                 // Render dashboard
                 renderDashboard();
+                
+                // Show save button
+                document.getElementById('saveDashboardBtn').style.display = 'inline-block';
                 
                 // Show crop photos button if screenshot was uploaded
                 const photoScreenshot = document.getElementById('photoScreenshot').files[0];
@@ -940,6 +2034,12 @@
 
         function filterRecentResponses(data) {
             if (!data || data.length === 0) return data;
+            
+            // Testing bypass
+            if (document.getElementById('bypassDateFilter') && document.getElementById('bypassDateFilter').checked) {
+                console.log('DATE FILTER BYPASSED — returning all', data.length, 'responses');
+                return data;
+            }
             
             console.log('BEFORE FILTERING:', data.length, 'responses');
             console.log('Sample timestamps:', data.slice(0, 5).map(d => d.Timestamp));
@@ -1282,7 +2382,7 @@
             // Match quiz responses to roster entries and photos
             return quizData.map(response => {
                 const riskLevel = assessRisk(response);
-                const studentName = response['First and Last Name'] || 'Unknown';
+                const studentName = (response['First and Last Name'] || 'Unknown').trim();
                 const normalizedStudentName = normalizeName(studentName);
                 
                 // Try to find matching photo
@@ -1302,11 +2402,11 @@
                 
                 // Detect whether this is the undergrad quiz (has section field)
                 const section = response['What section are you in?'] || '';
-                const preferredName = response['What name should we call you?'] || '';
+                const preferredName = response['What name should we call you?'] || response['What name should we call you? '] || '';
                 const yearAtUCLA = response['Year at UCLA? (Select all that apply)'] || '';
                 const priorQualExp = response['Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)'] || '';
-                const petPeeve = response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"'] || '';
-                const groundRuleSuggestion = response["What\'s a ground rule for our class you\'d like to suggest."] || response["What's a ground rule for our class you'd like to suggest."] || '';
+                const petPeeve = response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"'] || response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______" '] || '';
+                const groundRuleSuggestion = response["What\'s a ground rule for our class you\'d like to suggest."] || response["What's a ground rule for our class you'd like to suggest."] || response["What's a ground rule for our class you'd like to suggest. "] || '';
 
                 // For undergrad: use yearAtUCLA as major; for grad: use Year and Major
                 const majorField = yearAtUCLA || response['Year and Major'] || '';
@@ -1381,7 +2481,7 @@
             };
             
             quizData.forEach(response => {
-                const studentName = response['First and Last Name'] || 'Unknown';
+                const studentName = (response['First and Last Name'] || 'Unknown').trim();
                 
                 // Policy interests (normalize to broadest categories)
                 const interests = response['What are your top 3 policy interest areas? '] || '';
@@ -1465,9 +2565,9 @@
                 const hope = response["What's one hope you have for this class? "];
                 const fear = response["What's one fear you have for this class? "];
                 const challenge = response["Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for my eyes only.)"] || response["Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for the teaching team only.)"] || '';
-                const petPeeve = response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"'] || response.petPeeve || '';
-                const groundRule = response["What's a ground rule for our class you'd like to suggest."] || response.groundRuleSuggestion || '';
-                const priorQual = response['Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)'] || response.priorQualExp || '';
+                const petPeeve = response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"'] || response['Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______" '] || '';
+                const groundRule = response["What's a ground rule for our class you'd like to suggest."] || response["What's a ground rule for our class you'd like to suggest. "] || '';
+                const priorQual = response['Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)'] || '';
 
                 if (hope) insights.hopes.push(hope);
                 if (fear) insights.fears.push(fear);
@@ -1619,7 +2719,15 @@
                 const allSections = ['all', ...currentData.sections];
                 allSections.forEach(sec => {
                     const btn = document.createElement('button');
-                    const label = sec === 'all' ? 'All Sections' : 'Section ' + sec;
+                    // Count students in this section
+                    const secCount = sec === 'all' 
+                        ? currentData.students.length 
+                        : currentData.students.filter(s => {
+                            if (!s.section) return false;
+                            const m = s.section.match(/1[A-E]/i);
+                            return m ? m[0].toUpperCase() === sec : false;
+                        }).length;
+                    const label = sec === 'all' ? `All Sections (${secCount})` : `Section ${sec} (${secCount})`;
                     btn.textContent = label;
                     btn.style.cssText = 'padding:8px 16px; border-radius:20px; border:2px solid #E74C3C; cursor:pointer; font-size:0.9em; transition:all 0.2s;';
                     const isActive = (currentData.currentSection || 'all') === sec;
@@ -1660,14 +2768,29 @@
                 });
             }
             
-            // Render insights (always full class, not filtered by section)
-            renderInsights(currentData.insights, currentData.students.length);
-
-            // Add Ground Rules button to insights if we have ground rules data
-            if (currentData.insights && 
-                (currentData.insights.petPeeves.length > 0 || currentData.insights.groundRuleSuggestions.length > 0)) {
-                addGroundRulesButton();
+            // Render insights — filtered by section if a section is active
+            let insightsToRender = currentData.insights;
+            let insightStudentCount = currentData.students.length;
+            if (activeSection !== 'all') {
+                // Rebuild insights from only the filtered students' data
+                const filteredQuizData = filteredStudents.map(s => ({
+                    'First and Last Name': s.name,
+                    'What are your top 3 policy interest areas? ': s.policyInterests,
+                    "What's one hope you have for this class? ": s.hopes,
+                    "What's one fear you have for this class? ": s.fears,
+                    'What sorts of responsibilities do you have outside of this class? ': s.responsibilities,
+                    'Year and Major': s.major,
+                    'Year at UCLA? (Select all that apply)': s.major,
+                    'What section are you in?': s.section,
+                    'Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)': s.priorQualExp || '',
+                    'Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"': s.petPeeve || '',
+                    "What's a ground rule for our class you'd like to suggest.": s.groundRuleSuggestion || '',
+                    "Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for the teaching team only.)": s.challenges || ''
+                }));
+                insightsToRender = generateInsights(filteredQuizData);
+                insightStudentCount = filteredStudents.length;
             }
+            renderInsights(insightsToRender, insightStudentCount);
         }
         
         function sortStudents(students, sortBy) {
@@ -1676,14 +2799,14 @@
             switch(sortBy) {
                 case 'firstname':
                     return sorted.sort((a, b) => {
-                        const firstA = a.name.split(' ')[0].toLowerCase();
-                        const firstB = b.name.split(' ')[0].toLowerCase();
+                        const firstA = (a.name || '').trim().split(/\s+/)[0].toLowerCase();
+                        const firstB = (b.name || '').trim().split(/\s+/)[0].toLowerCase();
                         return firstA.localeCompare(firstB);
                     });
                 case 'lastname':
                     return sorted.sort((a, b) => {
-                        const partsA = a.name.split(' ');
-                        const partsB = b.name.split(' ');
+                        const partsA = (a.name || '').trim().split(/\s+/);
+                        const partsB = (b.name || '').trim().split(/\s+/);
                         const lastA = partsA[partsA.length - 1].toLowerCase();
                         const lastB = partsB[partsB.length - 1].toLowerCase();
                         return lastA.localeCompare(lastB);
@@ -1754,10 +2877,17 @@
                 photoHTML = `<div class="student-photo">${initials}</div>`;
             }
             
+            // Extract section code for badge
+            const sectionCode = student.section ? (student.section.match(/1[A-E]/i) ? student.section.match(/1[A-E]/i)[0].toUpperCase() : student.section.trim()) : '';
+            const displayName = (student.preferredName && student.preferredName !== student.name.split(' ')[0])
+                ? `${student.name} <span style="color:#7f8c8d; font-size:0.85em; font-weight:normal;">(${student.preferredName})</span>`
+                : student.name;
+
             card.innerHTML = `
                 ${photoHTML}
                 <div class="student-info">
-                    <div class="student-name">${student.name}</div>
+                    <div class="student-name">${displayName}</div>
+                    ${sectionCode ? `<span style="background:#3498db; color:white; font-size:0.75em; padding:2px 8px; border-radius:10px; margin-bottom:4px; display:inline-block;">§ ${sectionCode}</span>` : ''}
                     ${student.pronouns ? `<div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 3px;">${student.pronouns}</div>` : ''}
                     ${student.pronunciation ? `<div class="student-pronunciation">${student.pronunciation}</div>` : ''}
                     <span class="risk-badge ${student.riskLevel}">${student.riskLevel.toUpperCase()} RISK</span>
@@ -1844,9 +2974,14 @@
                 </div>
                 
                 <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid var(--warning);">
-                    <strong style="color: #856404;">⚠️ Remove Student</strong>
-                    <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, you can remove them from your dashboard.</p>
-                    <button class="deleteMissingStudentBtn" data-student-name="${studentName}" style="background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Remove Student</button>
+                    ${currentRole === 'admin' ? `
+                        <strong style="color: #856404;">⚠️ Remove Student</strong>
+                        <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, you can remove them from your dashboard.</p>
+                        <button class="deleteMissingStudentBtn" data-student-name="${studentName}" style="background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Remove Student</button>
+                    ` : `
+                        <strong style="color: #856404;">📩 Request Removal</strong>
+                        <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, notify the instructor to remove them.</p>
+                    `}
                 </div>
             `;
             
@@ -2025,9 +3160,14 @@
                 </div>
                 
                 <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid var(--warning);">
-                    <strong style="color: #856404;">⚠️ Remove Student</strong>
-                    <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, you can remove them from your dashboard.</p>
-                    <button id="deleteStudentBtn" data-student-name="${student.name}" style="background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Remove Student</button>
+                    ${currentRole === 'admin' ? `
+                        <strong style="color: #856404;">⚠️ Remove Student</strong>
+                        <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, you can remove them from your dashboard.</p>
+                        <button id="deleteStudentBtn" data-student-name="${student.name}" style="background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Remove Student</button>
+                    ` : `
+                        <strong style="color: #856404;">📩 Request Removal</strong>
+                        <p style="margin: 10px 0; font-size: 0.9em; color: #856404;">If this student dropped the class, notify the instructor to remove them.</p>
+                    `}
                 </div>
             `;
             
@@ -2037,12 +3177,15 @@
                 document.getElementById('studentNotes').value = savedNotes;
             }
             
-            // Add delete button handler
+            // Add delete button handler (admin only)
             setTimeout(() => {
-                document.getElementById('deleteStudentBtn').addEventListener('click', (e) => {
-                    const studentName = e.target.dataset.studentName;
-                    confirmDeleteStudent(studentName);
-                });
+                const delBtn = document.getElementById('deleteStudentBtn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', (e) => {
+                        const studentName = e.target.dataset.studentName;
+                        confirmDeleteStudent(studentName);
+                    });
+                }
             }, 100);
             
             modal.style.display = 'block';
@@ -2097,7 +3240,13 @@
                 "What's one hope you have for this class? ": s.hopes,
                 "What's one fear you have for this class? ": s.fears,
                 'What sorts of responsibilities do you have outside of this class? ': s.responsibilities,
-                'Year and Major': s.major
+                'Year and Major': s.major,
+                'Year at UCLA? (Select all that apply)': s.major,
+                'What section are you in?': s.section,
+                'Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)': s.priorQualExp,
+                'Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"': s.petPeeve,
+                "What's a ground rule for our class you'd like to suggest.": s.groundRuleSuggestion,
+                "Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for the teaching team only.)": s.challenges
             }));
             
             currentData.insights = generateInsights(quizDataWithoutStudent);
@@ -2351,6 +3500,7 @@
             // Close cropper
             document.getElementById('photoCropperModal').style.display = 'none';
             
+            autoSave();
             alert(`Applied ${Object.keys(photoCropperState.croppedPhotos).length} photos to students!`);
         });
 
@@ -2360,17 +3510,21 @@
             
             // Add summary stats at the top
             const currentData = dashboardState.classes[dashboardState.currentClass];
-            const rosterCount = currentData.originalRosterTotal || currentData.rosterTotal || totalStudents;
-            const quizCount = totalStudents;
-            const missingCount = currentData.missingStudents ? currentData.missingStudents.length : 0;
-            const quizOnlyCount = currentData.quizOnlyStudents ? currentData.quizOnlyStudents.length : 0;
+            const activeSection = currentData ? (currentData.currentSection || 'all') : 'all';
+            const isFiltered = activeSection !== 'all';
             
-            console.log('Summary stats:', { rosterCount, quizCount, missingCount, quizOnlyCount, missingStudents: currentData.missingStudents, quizOnlyStudents: currentData.quizOnlyStudents });
+            // When filtered by section, show filtered counts; otherwise show full class
+            const rosterCount = isFiltered ? totalStudents : (currentData.originalRosterTotal || currentData.rosterTotal || totalStudents);
+            const quizCount = totalStudents;
+            const missingCount = isFiltered ? 0 : (currentData.missingStudents ? currentData.missingStudents.length : 0);
+            const quizOnlyCount = isFiltered ? 0 : (currentData.quizOnlyStudents ? currentData.quizOnlyStudents.length : 0);
+            
+            console.log('Summary stats:', { rosterCount, quizCount, missingCount, quizOnlyCount, activeSection });
             
             const summarySection = document.createElement('div');
             summarySection.className = 'insight-section';
             summarySection.innerHTML = `
-                <div class="insight-title">📋 Class Summary</div>
+                <div class="insight-title">📋 ${isFiltered ? 'Section ' + activeSection + ' Summary' : 'Class Summary'}</div>
                 <div style="display: grid; grid-template-columns: repeat(${quizOnlyCount > 0 ? 4 : 3}, 1fr); gap: 15px; margin-bottom: 20px;">
                     <div style="background: var(--success); color: white; padding: 20px; border-radius: 8px; text-align: center;">
                         <div style="font-size: 2em; font-weight: bold;">${rosterCount}</div>
@@ -2416,7 +3570,7 @@
                 .sort((a, b) => b[1] - a[1]);
             
             if (topInterests.length > 0) {
-                const section = createClickableInsightSection('Policy Interests (All)', topInterests, insights.policyInterestStudents);
+                const section = createClickableInsightSection('🎯 Policy Interests', topInterests, insights.policyInterestStudents);
                 container.appendChild(section);
             }
             
@@ -2456,25 +3610,152 @@
                 container.appendChild(priorSection);
             }
 
-            // Ground Rules teaser (if data available)
-            if (insights.petPeeves && (insights.petPeeves.length > 0 || insights.groundRuleSuggestions.length > 0)) {
-                const grSection = document.createElement('div');
-                grSection.className = 'insight-section';
-                grSection.innerHTML = `
-                    <div class="insight-title">📋 Class Ground Rules</div>
-                    <div style="background: linear-gradient(135deg, #e8f4fd, #e8f8e8); padding:20px; border-radius:8px; text-align:center; border: 1px solid #c8e6c9;">
-                        <div style="font-size:2em; margin-bottom:10px;">📝</div>
-                        <p style="margin-bottom:5px;"><strong>${insights.petPeeves.length}</strong> pet peeve responses &amp; <strong>${insights.groundRuleSuggestions.length}</strong> suggested ground rules collected</p>
-                        <p style="font-size:0.9em; color:#555; margin-bottom:15px;">Click below to synthesize student input into class agreements using AI</p>
-                        <button onclick="openGroundRulesModal()" style="background:#E74C3C; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-size:1em; font-weight:bold;">✨ Generate Ground Rules</button>
-                    </div>`;
-                container.appendChild(grSection);
-            }
-
             // Actionable Insights
             if (insights.actionableInsights && insights.actionableInsights.length > 0) {
                 const section = createActionableInsightsSection(insights.actionableInsights);
                 container.appendChild(section);
+            }
+
+            // Ground Rules section — always show for undergrad classes
+            const currentClassKey = dashboardState.currentClass;
+            const isUndergradClass = currentClassKey === 'undergrad-qual-methods';
+            if (isUndergradClass) {
+                const grSection = document.createElement('div');
+                grSection.className = 'insight-section';
+                const hasPetPeeves = insights.petPeeves && insights.petPeeves.length > 0;
+                const hasGroundRules = insights.groundRuleSuggestions && insights.groundRuleSuggestions.length > 0;
+                
+                if (hasPetPeeves || hasGroundRules) {
+                    const INITIAL_SHOW = 8;
+                    
+                    // Build pet peeves list
+                    let petPeevesHTML = '';
+                    if (hasPetPeeves) {
+                        const topPeeves = insights.petPeeves.slice(0, INITIAL_SHOW);
+                        const morePeeves = insights.petPeeves.slice(INITIAL_SHOW);
+                        petPeevesHTML = `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">😤 Pet Peeves (${insights.petPeeves.length})</h4>
+                                <div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 8px;">In classes I hate it when...</div>
+                                <div class="peeves-list">
+                                    ${topPeeves.map(p => `
+                                        <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
+                                            <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${morePeeves.length > 0 ? `
+                                    <div class="peeves-overflow" style="display: none;">
+                                        ${morePeeves.map(p => `
+                                            <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
+                                                <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <button class="peeves-show-more" style="background: none; border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: var(--primary); font-size: 0.85em; margin-top: 8px;">Show ${morePeeves.length} more ▼</button>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    // Build ground rules suggestions list
+                    let suggestionsHTML = '';
+                    if (hasGroundRules) {
+                        const topSugg = insights.groundRuleSuggestions.slice(0, INITIAL_SHOW);
+                        const moreSugg = insights.groundRuleSuggestions.slice(INITIAL_SHOW);
+                        suggestionsHTML = `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">📝 Suggested Ground Rules (${insights.groundRuleSuggestions.length})</h4>
+                                <div class="suggestions-list">
+                                    ${topSugg.map(s => `
+                                        <div style="padding: 8px 12px; background: #f0fff4; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #27ae60; font-size: 0.9em;">
+                                            <strong style="font-size: 0.85em; color: #666;">${s.name}:</strong> ${s.text}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${moreSugg.length > 0 ? `
+                                    <div class="suggestions-overflow" style="display: none;">
+                                        ${moreSugg.map(s => `
+                                            <div style="padding: 8px 12px; background: #f0fff4; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #27ae60; font-size: 0.9em;">
+                                                <strong style="font-size: 0.85em; color: #666;">${s.name}:</strong> ${s.text}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <button class="suggestions-show-more" style="background: none; border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: var(--primary); font-size: 0.85em; margin-top: 8px;">Show ${moreSugg.length} more ▼</button>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    grSection.innerHTML = `
+                        <div class="insight-title">📋 Class Ground Rules</div>
+                        <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 15px;">${insights.petPeeves.length} pet peeve responses &amp; ${insights.groundRuleSuggestions.length} suggested ground rules collected</div>
+                        ${petPeevesHTML}
+                        ${suggestionsHTML}
+                        <div style="text-align: center; padding-top: 15px; border-top: 1px dashed #ddd;">
+                            <button onclick="openGroundRulesModal()" style="background: linear-gradient(135deg, #E74C3C, #c0392b); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:0.9em;">✨ Synthesize into Class Agreements with AI</button>
+                        </div>
+                    `;
+                    
+                    // Add show more handlers
+                    setTimeout(() => {
+                        const peevesBtn = grSection.querySelector('.peeves-show-more');
+                        if (peevesBtn) {
+                            peevesBtn.addEventListener('click', () => {
+                                const overflow = grSection.querySelector('.peeves-overflow');
+                                if (overflow.style.display === 'none') {
+                                    overflow.style.display = 'block';
+                                    peevesBtn.textContent = 'Show fewer ▲';
+                                } else {
+                                    overflow.style.display = 'none';
+                                    peevesBtn.textContent = `Show ${morePeeves.length} more ▼`;
+                                }
+                            });
+                        }
+                        const suggBtn = grSection.querySelector('.suggestions-show-more');
+                        if (suggBtn) {
+                            suggBtn.addEventListener('click', () => {
+                                const overflow = grSection.querySelector('.suggestions-overflow');
+                                if (overflow.style.display === 'none') {
+                                    overflow.style.display = 'block';
+                                    suggBtn.textContent = 'Show fewer ▲';
+                                } else {
+                                    overflow.style.display = 'none';
+                                    suggBtn.textContent = `Show ${moreSugg.length} more ▼`;
+                                }
+                            });
+                        }
+                    }, 100);
+                } else {
+                    grSection.innerHTML = `
+                        <div class="insight-title">📋 Class Ground Rules</div>
+                        <div style="background: #f8f9fa; padding:20px; border-radius:8px; text-align:center; border: 2px dashed #bdc3c7;">
+                            <div style="font-size:2em; margin-bottom:10px; opacity:0.4;">📝</div>
+                            <p style="color:#95a5a6; margin-bottom:5px;">No ground rules data yet</p>
+                            <p style="font-size:0.85em; color:#bdc3c7;">Pet peeve and suggested ground rule responses will appear here once students complete the welcome quiz.</p>
+                        </div>`;
+                }
+                container.appendChild(grSection);
+            } else if (insights.petPeeves && (insights.petPeeves.length > 0 || insights.groundRuleSuggestions.length > 0)) {
+                // Non-undergrad but has ground rules data
+                const grSection = document.createElement('div');
+                grSection.className = 'insight-section';
+                grSection.innerHTML = `
+                    <div class="insight-title">📋 Class Ground Rules</div>
+                    <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px;">${insights.petPeeves.length} pet peeve responses &amp; ${insights.groundRuleSuggestions.length} suggested ground rules</div>
+                    ${insights.petPeeves.length > 0 ? `
+                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                            ${insights.petPeeves.map(p => `
+                                <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
+                                    <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <div style="text-align: center;">
+                        <button onclick="openGroundRulesModal()" style="background: linear-gradient(135deg, #E74C3C, #c0392b); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:0.9em;">✨ Synthesize with AI</button>
+                    </div>`;
+                container.appendChild(grSection);
             }
         }
 
@@ -2501,17 +3782,37 @@
             const section = document.createElement('div');
             section.className = 'insight-section';
             
+            const INITIAL_SHOW = 10;
+            const hasMore = items.length > INITIAL_SHOW;
+            const topItems = items.slice(0, INITIAL_SHOW);
+            const remainingItems = items.slice(INITIAL_SHOW);
+            
             section.innerHTML = `
                 <div class="insight-title">${title}</div>
                 <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px;">Click an interest to see students</div>
                 <ul class="insight-list">
-                    ${items.map(([name, count]) => `
+                    ${topItems.map(([name, count]) => `
                         <li class="insight-item interest-clickable" data-interest="${name}" style="cursor: pointer; transition: all 0.3s;">
                             <span>${name}</span>
                             <span class="insight-count">${count}</span>
                         </li>
                     `).join('')}
                 </ul>
+                ${hasMore ? `
+                    <div class="interest-overflow" style="display: none;">
+                        <ul class="insight-list">
+                            ${remainingItems.map(([name, count]) => `
+                                <li class="insight-item interest-clickable" data-interest="${name}" style="cursor: pointer; transition: all 0.3s;">
+                                    <span>${name}</span>
+                                    <span class="insight-count">${count}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    <button class="interest-show-more-btn" style="background: none; border: 1px solid #ddd; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: var(--primary); font-size: 0.9em; margin-top: 10px; width: 100%; transition: all 0.2s;">
+                        Show ${remainingItems.length} more interests ▼
+                    </button>
+                ` : ''}
             `;
             
             // Add click handlers after rendering
@@ -2533,6 +3834,21 @@
                         showInterestStudentsModal(interest, studentMapping[interest]);
                     });
                 });
+                
+                // Show more toggle
+                const showMoreBtn = section.querySelector('.interest-show-more-btn');
+                if (showMoreBtn) {
+                    showMoreBtn.addEventListener('click', () => {
+                        const overflow = section.querySelector('.interest-overflow');
+                        if (overflow.style.display === 'none') {
+                            overflow.style.display = 'block';
+                            showMoreBtn.textContent = 'Show fewer interests ▲';
+                        } else {
+                            overflow.style.display = 'none';
+                            showMoreBtn.textContent = `Show ${remainingItems.length} more interests ▼`;
+                        }
+                    });
+                }
             }, 100);
             
             return section;
@@ -2740,25 +4056,142 @@
             
             modal.style.display = 'block';
         }
+
+        // ─── GROUND RULES ────────────────────────────────────────────────────────
+        function openGroundRulesModal() {
+            document.getElementById('groundRulesModal').style.display = 'block';
+        }
+
+        document.getElementById('closeGroundRulesModal').addEventListener('click', () => {
+            document.getElementById('groundRulesModal').style.display = 'none';
+        });
+
+        document.getElementById('groundRulesModal').addEventListener('click', (e) => {
+            if (e.target.id === 'groundRulesModal') {
+                document.getElementById('groundRulesModal').style.display = 'none';
+            }
+        });
+
+        document.getElementById('copyGroundRulesBtn').addEventListener('click', () => {
+            const text = document.getElementById('groundRulesContent').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyGroundRulesBtn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.textContent = '📋 Copy to Clipboard'; }, 2000);
+            });
+        });
+
+        document.getElementById('generateGroundRulesBtn').addEventListener('click', async () => {
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData || !currentData.insights) { alert('No class data loaded.'); return; }
+
+            const petPeeves = currentData.insights.petPeeves || [];
+            const suggestions = currentData.insights.groundRuleSuggestions || [];
+
+            if (petPeeves.length === 0 && suggestions.length === 0) {
+                alert('No ground rules data found in this class.');
+                return;
+            }
+
+            const btn = document.getElementById('generateGroundRulesBtn');
+            btn.textContent = '⏳ Generating...';
+            btn.disabled = true;
+
+            const grContent = document.getElementById('groundRulesContent');
+            grContent.innerHTML = `<div style="text-align:center; padding:40px; color:#555;"><p>Synthesizing ${petPeeves.length} pet peeves and ${suggestions.length} student suggestions...</p></div>`;
+
+            const petPeevesText = petPeeves.map((p, i) => `${i+1}. "${p.text}"`).join("\n");
+            const suggestionsText = suggestions.map((s, i) => `${i+1}. "${s.text}"`).join("\n");
+
+            const prompt = `You are helping a UCLA professor create class ground rules based on student input from a welcome quiz for a large undergraduate class.
+
+STUDENT PET PEEVES (what they hate in large classes):
+${petPeevesText || '(none provided)'}
+
+STUDENT SUGGESTED GROUND RULES:
+${suggestionsText || '(none provided)'}
+
+Your task:
+1. Identify the 6-8 most important themes across all responses
+2. For each theme, write ONE clear, positive class agreement (reframe negatives as positives — e.g. "I hate when people talk over each other" becomes "We agree to let each speaker finish before responding")
+3. Make each ground rule concise, actionable, and written in first-person plural ("We...")
+4. At the end, add a brief note for the professor on 1-2 recurring themes to explicitly address in week 1
+
+Format your response as:
+## Proposed Class Ground Rules
+
+1. [Ground rule]
+2. [Ground rule]
+...
+
+## Notes for Professor
+[Brief notes]`;
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1000,
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.content && data.content[0] ? data.content[0].text : '';
+                if (!text) throw new Error('No response from AI');
+
+                const lines = text.split("\n");
+                let html = '<div style="line-height:1.7;">';
+                lines.forEach(line => {
+                    if (line.startsWith('## ')) {
+                        html += `<h3 style="color:#2C3E50; margin:20px 0 10px; border-bottom:2px solid #E74C3C; padding-bottom:5px;">${line.replace('## ','')}</h3>`;
+                    } else if (/^\d+\./.test(line)) {
+                        const num = line.match(/^(\d+\.)/)[1];
+                        const rule = line.replace(/^\d+\.\s*/,'');
+                        html += `<div style="display:flex; gap:12px; margin-bottom:12px; padding:12px 15px; background:#f8f9fa; border-radius:8px; border-left:4px solid #27ae60; align-items:flex-start;">
+                            <span style="background:#27ae60; color:white; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.85em; flex-shrink:0;">${num.replace('.','')}</span>
+                            <span>${rule}</span></div>`;
+                    } else if (line.trim()) {
+                        html += `<p style="margin-bottom:8px; color:#555;">${line}</p>`;
+                    }
+                });
+                html += '</div>';
+
+                html += `<div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+                    <h3 style="color:#7f8c8d; font-size:0.95em; margin-bottom:15px;">📝 Raw Student Responses</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div>
+                            <strong style="color:#e67e22;">Pet Peeves (${petPeeves.length})</strong>
+                            <div style="max-height:200px; overflow-y:auto; margin-top:8px;">
+                                ${petPeeves.map(p => `<div style="padding:6px 10px; background:#fff8e5; border-radius:4px; margin-bottom:5px; font-size:0.85em;">"${p.text}"</div>`).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color:#27ae60;">Suggested Rules (${suggestions.length})</strong>
+                            <div style="max-height:200px; overflow-y:auto; margin-top:8px;">
+                                ${suggestions.map(s => `<div style="padding:6px 10px; background:#e8f8e8; border-radius:4px; margin-bottom:5px; font-size:0.85em;">"${s.text}"</div>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                grContent.innerHTML = html;
+                document.getElementById('copyGroundRulesBtn').style.display = 'inline-block';
+
+            } catch (err) {
+                grContent.innerHTML = `<div style="padding:20px; background:#ffe5e5; border-radius:8px; color:#c0392b;">
+                    <strong>Error:</strong> ${err.message}<br><br>
+                    <em>This feature requires the dashboard to be opened in claude.ai which provides API access.</em>
+                </div>`;
+            }
+
+            btn.textContent = '✨ Regenerate';
+            btn.disabled = false;
+        });
+        // ─── END GROUND RULES ─────────────────────────────────────────────────
     </script>
-    <!-- Ground Rules Modal -->
-    <div id="groundRulesModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto; padding:20px;">
-        <div style="max-width:900px; margin:50px auto; background:white; border-radius:12px; padding:30px; position:relative; max-height:85vh; display:flex; flex-direction:column;">
-            <button id="closeGroundRulesModal" style="position:absolute; top:20px; right:20px; background:#e74c3c; color:white; border:none; border-radius:50%; width:40px; height:40px; font-size:24px; cursor:pointer; line-height:1; z-index:10;">×</button>
-            <h2 style="margin-bottom:5px; color:#2C3E50;">📋 Class Ground Rules Generator</h2>
-            <p style="color:#7f8c8d; margin-bottom:20px; font-size:0.95em;">AI-synthesized from student pet peeves and suggested ground rules</p>
-            <div id="groundRulesContent" style="overflow-y:auto; flex:1;">
-                <div style="text-align:center; padding:40px; color:#95a5a6;">
-                    <div style="font-size:3em; margin-bottom:15px;">🤖</div>
-                    <p>Click "Generate Ground Rules" to synthesize student responses into class agreements.</p>
-                </div>
-            </div>
-            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:center;">
-                <button id="generateGroundRulesBtn" style="background:#E74C3C; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:1em; font-weight:bold;">✨ Generate Ground Rules</button>
-                <button id="copyGroundRulesBtn" style="display:none; background:#27AE60; color:white; border:none; padding:14px 28px; border-radius:8px; cursor:pointer; font-size:1em;">📋 Copy to Clipboard</button>
-            </div>
-        </div>
-    </div>
 
 </body>
 </html>
