@@ -641,6 +641,15 @@
             
             <h2 style="margin-bottom: 20px; color: var(--primary);">📸 Photo Cropper</h2>
             
+            <div style="background: #fff3cd; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <strong style="color: #856404;">📷 Need to crop more photos from a different page?</strong>
+                <label style="background: #f39c12; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">
+                    Load New Screenshot
+                    <input type="file" id="cropperNewScreenshot" accept="image/*" style="display: none;">
+                </label>
+                <span style="font-size: 0.85em; color: #856404;">Your saved photos will be preserved.</span>
+            </div>
+            
             <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <strong>Instructions:</strong>
                 <ol style="margin: 10px 0 0 20px;">
@@ -1704,11 +1713,23 @@
             const className = document.getElementById('classSelect').value;
             
             try {
+                // PRESERVE existing work before regenerating
+                const existingClass = dashboardState.classes[className];
+                const existingPhotos = {};
+                if (existingClass && existingClass.students) {
+                    existingClass.students.forEach(s => {
+                        if (s.photo) existingPhotos[s.name] = s.photo;
+                    });
+                }
+                // Also pull from the persistent photo library
+                Object.assign(existingPhotos, photoCropperState.croppedPhotos || {});
+                
                 // Parse quiz data
                 const quizData = await parseQuizFile(quizFile);
                 
                 console.log('Quiz data after filtering:', quizData);
-                alert(`Loaded quiz data: ${quizData.length} students found${document.getElementById('bypassDateFilter').checked ? ' (date filter bypassed)' : ' for current quarter'}`);
+                const preservedCount = Object.keys(existingPhotos).length;
+                alert(`Loaded quiz data: ${quizData.length} students found${document.getElementById('bypassDateFilter').checked ? ' (date filter bypassed)' : ' for current quarter'}${preservedCount > 0 ? `\n\n📸 Preserving ${preservedCount} existing photo(s)` : ''}`);
                 
                 // Parse roster data (optional)
                 let rosterData = { students: [], photos: [] };
@@ -1780,6 +1801,45 @@
                     sections: sections,
                     currentSection: 'all'
                 };
+                
+                // RESTORE preserved photos onto new student objects
+                let restoredCount = 0;
+                if (Object.keys(existingPhotos).length > 0) {
+                    // Build a normalized lookup of existing photos
+                    const normalizedPhotoMap = {};
+                    for (const [name, photo] of Object.entries(existingPhotos)) {
+                        normalizedPhotoMap[normalizeName(name)] = { name, photo };
+                    }
+                    
+                    dashboardState.classes[className].students.forEach(s => {
+                        const normalized = normalizeName(s.name);
+                        // Try exact match first
+                        if (normalizedPhotoMap[normalized]) {
+                            s.photo = normalizedPhotoMap[normalized].photo;
+                            photoCropperState.croppedPhotos[s.name] = normalizedPhotoMap[normalized].photo;
+                            restoredCount++;
+                        } else {
+                            // Try fuzzy: match by 2+ name parts
+                            const sParts = normalized.split(' ').filter(p => p.length > 0);
+                            for (const [normKey, info] of Object.entries(normalizedPhotoMap)) {
+                                const keyParts = normKey.split(' ').filter(p => p.length > 0);
+                                let matches = 0;
+                                for (const sp of sParts) {
+                                    for (const kp of keyParts) {
+                                        if (namesMatch(sp, kp)) { matches++; break; }
+                                    }
+                                }
+                                if (matches >= 2) {
+                                    s.photo = info.photo;
+                                    photoCropperState.croppedPhotos[s.name] = info.photo;
+                                    restoredCount++;
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                    console.log(`Restored ${restoredCount} photos out of ${Object.keys(existingPhotos).length} preserved`);
+                }
                 
                 console.log('Final class data stored:', dashboardState.classes[className]);
                 
@@ -2114,68 +2174,72 @@
                         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                         
                         const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        const page = await pdf.getPage(1);
-                        const textContent = await page.getTextContent();
+                        const numPages = pdf.numPages;
+                        console.log(`Roster PDF has ${numPages} page(s)`);
                         
-                        // Extract text items
-                        const text = textContent.items.map(item => item.str).join(' ');
-                        
-                        // Pattern to match names like "LAST, FIRST MIDDLE"
                         const namePattern = /([A-Z][A-Z\s'-]+),\s+([A-Z][A-Z\s'-]+)/g;
                         const names = [];
-                        let match;
-                        
-                        while ((match = namePattern.exec(text)) !== null) {
-                            const lastName = match[1].trim();
-                            const firstMiddle = match[2].trim();
-                            // Skip if it looks like a header or other non-name text
-                            if (lastName.length > 2 && firstMiddle.length > 2) {
-                                names.push(`${lastName}, ${firstMiddle}`);
-                            }
-                        }
-                        
-                        // Extract images from the PDF
-                        const viewport = page.getViewport({ scale: 1.0 });
-                        const operatorList = await page.getOperatorList();
-                        
                         const photos = [];
+                        const seenNames = new Set();
                         
-                        // Try to extract images
-                        try {
-                            for (let i = 0; i < operatorList.fnArray.length; i++) {
-                                if (operatorList.fnArray[i] === pdfjsLib.OPS.paintImageXObject || 
-                                    operatorList.fnArray[i] === pdfjsLib.OPS.paintInlineImageXObject ||
-                                    operatorList.fnArray[i] === pdfjsLib.OPS.paintJpegXObject) {
-                                    
-                                    const imgName = operatorList.argsArray[i][0];
-                                    
-                                    try {
-                                        const img = await page.objs.get(imgName);
-                                        
-                                        if (img && img.data) {
-                                            // Convert image data to base64
-                                            const canvas = document.createElement('canvas');
-                                            canvas.width = img.width;
-                                            canvas.height = img.height;
-                                            const ctx = canvas.getContext('2d');
-                                            
-                                            const imageData = ctx.createImageData(img.width, img.height);
-                                            imageData.data.set(img.data);
-                                            ctx.putImageData(imageData, 0, 0);
-                                            
-                                            const photoUrl = canvas.toDataURL('image/jpeg', 0.8);
-                                            photos.push(photoUrl);
-                                        }
-                                    } catch (imgError) {
-                                        console.warn('Could not extract image:', imgError);
+                        // Loop through ALL pages
+                        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const textContent = await page.getTextContent();
+                            const text = textContent.items.map(item => item.str).join(' ');
+                            
+                            // Extract names from this page
+                            let match;
+                            namePattern.lastIndex = 0;
+                            while ((match = namePattern.exec(text)) !== null) {
+                                const lastName = match[1].trim();
+                                const firstMiddle = match[2].trim();
+                                if (lastName.length > 2 && firstMiddle.length > 2) {
+                                    const fullName = `${lastName}, ${firstMiddle}`;
+                                    if (!seenNames.has(fullName)) {
+                                        seenNames.add(fullName);
+                                        names.push(fullName);
                                     }
                                 }
                             }
-                        } catch (imageError) {
-                            console.warn('Photo extraction not fully supported, using initials instead:', imageError);
+                            
+                            // Extract images from this page
+                            try {
+                                const operatorList = await page.getOperatorList();
+                                for (let i = 0; i < operatorList.fnArray.length; i++) {
+                                    if (operatorList.fnArray[i] === pdfjsLib.OPS.paintImageXObject || 
+                                        operatorList.fnArray[i] === pdfjsLib.OPS.paintInlineImageXObject ||
+                                        operatorList.fnArray[i] === pdfjsLib.OPS.paintJpegXObject) {
+                                        
+                                        const imgName = operatorList.argsArray[i][0];
+                                        
+                                        try {
+                                            const img = await page.objs.get(imgName);
+                                            
+                                            if (img && img.data) {
+                                                const canvas = document.createElement('canvas');
+                                                canvas.width = img.width;
+                                                canvas.height = img.height;
+                                                const ctx = canvas.getContext('2d');
+                                                
+                                                const imageData = ctx.createImageData(img.width, img.height);
+                                                imageData.data.set(img.data);
+                                                ctx.putImageData(imageData, 0, 0);
+                                                
+                                                const photoUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                                photos.push(photoUrl);
+                                            }
+                                        } catch (imgError) {
+                                            console.warn('Could not extract image:', imgError);
+                                        }
+                                    }
+                                }
+                            } catch (imageError) {
+                                console.warn(`Photo extraction failed on page ${pageNum}:`, imageError);
+                            }
                         }
                         
-                        console.log(`Extracted ${names.length} names and ${photos.length} photos from roster`);
+                        console.log(`Extracted ${names.length} names and ${photos.length} photos from ${numPages} page(s)`);
                         
                         resolve({
                             students: names,
@@ -2464,11 +2528,165 @@
             return { level, summary };
         }
 
+        function categorizeExperience(text) {
+            if (!text || text.trim().length < 3) return 'No Experience';
+            const lower = text.toLowerCase().trim();
+            
+            // No experience markers - check first
+            if (/^(no|none|n\/a|na|nothing|nope|zero)[\s\.\!]*$/i.test(lower)) return 'No Experience';
+            const noneMarkers = ['no experience', 'no prior', "haven't", 'have not', 'never had',
+                                  'this is my first', 'first time', 'no relevant', 'none yet'];
+            for (const m of noneMarkers) {
+                if (lower.includes(m)) return 'No Experience';
+            }
+            
+            // Extensive experience markers
+            const extensiveMarkers = ['extensive', 'many years', 'several years', 'phd', 'thesis', 
+                                       'dissertation', 'multiple studies', 'published', 'expert',
+                                       'years of experience', 'conducted dozens', 'lead researcher',
+                                       'principal investigator', 'professional researcher'];
+            for (const m of extensiveMarkers) {
+                if (lower.includes(m)) return 'Extensive';
+            }
+            
+            // Significant experience markers
+            const significantMarkers = ['conducted interviews', 'led focus groups', 'ran focus groups',
+                                         'have conducted', 'have led', 'multiple courses', 'several courses',
+                                         'capstone', 'honors thesis', 'research assistant', 'ra for',
+                                         'qualitative methods course', 'ethnograph'];
+            let sigCount = 0;
+            for (const m of significantMarkers) {
+                if (lower.includes(m)) sigCount++;
+            }
+            if (sigCount >= 2) return 'Significant';
+            if (sigCount >= 1 && lower.length > 80) return 'Significant';
+            
+            // Some experience markers
+            const someMarkers = ['interview', 'focus group', 'survey', 'coursework', 'course work',
+                                  'took a class', 'taken a class', 'participated', 'observed', 'observation',
+                                  'assisted', 'helped with', 'familiar', 'introduction to', 'intro to',
+                                  'basic', 'some experience', 'a little'];
+            for (const m of someMarkers) {
+                if (lower.includes(m)) return 'Some Experience';
+            }
+            
+            // Substantive answer with no clear markers → assume some
+            if (lower.length > 30) return 'Some Experience';
+            return 'No Experience';
+        }
+        
+        function clusterGroundRules(petPeeves, suggestions) {
+            const themes = [
+                {
+                    id: 'respect_listening',
+                    title: 'Respect & Active Listening',
+                    icon: '👂',
+                    keywords: ['respect', 'listen', 'attentive', 'mindful', 'space to share', 'space to speak',
+                               'share the mic', 'one person', '1 person', 'kind', 'kindness', 'open mind',
+                               'judgment', 'judging', 'judge', 'mock', 'belittl', 'dismissive'],
+                    agreement: 'We listen actively and treat each other with respect — every voice in this room matters.'
+                },
+                {
+                    id: 'no_phones',
+                    title: 'Phones & Screens',
+                    icon: '📵',
+                    keywords: ['phone', 'screen', 'laptop', 'distract', 'device', 'tiktok', 'instagram', 
+                               'social media', 'silent mode', 'scroll', 'texting'],
+                    agreement: 'We keep phones silent and screens used only for class — no scrolling, texting, or distracting our neighbors.'
+                },
+                {
+                    id: 'side_conversations',
+                    title: 'Side Conversations & Talking Over',
+                    icon: '🤫',
+                    keywords: ['talk over', 'talking over', 'side conversation', 'side chat', 'small talk',
+                               'chatter', 'whisper', 'interrupt', 'cut off', 'speak over', 'noisy',
+                               'side talk', 'background noise', 'conversations during'],
+                    agreement: 'We let each speaker finish before responding — no side conversations or talking over the professor or peers during instruction.'
+                },
+                {
+                    id: 'participation',
+                    title: 'Participation & Engagement',
+                    icon: '🙋',
+                    keywords: ['participat', 'engage', 'engagement', 'raise hand', 'raise your hand', 'speak up',
+                               'contribute', 'discussion', 'ask question', 'silent class', 'quiet class'],
+                    agreement: 'We commit to engaging — raising hands, asking questions, and contributing to discussion so the class feels alive.'
+                },
+                {
+                    id: 'inclusion',
+                    title: 'Inclusion & Diverse Perspectives',
+                    icon: '🤝',
+                    keywords: ['inclusi', 'diverse', 'diversity', 'perspective', 'different opinion', 'differing',
+                               'opinion', 'background', 'identity', 'safe space', 'welcoming',
+                               'all voices', 'marginal', 'minority', 'underrepresented', 'all communities'],
+                    agreement: 'We make space for diverse perspectives and identities — everyone in this room belongs here.'
+                },
+                {
+                    id: 'punctuality',
+                    title: 'Punctuality & Preparation',
+                    icon: '⏰',
+                    keywords: ['late', 'punctual', 'on time', 'prepare', 'prepared', 'ready', 'do the reading',
+                               'do readings', 'unprepared', 'tardiness', 'tardy', 'arrive on time'],
+                    agreement: 'We arrive on time and come prepared — having done the readings and ready to engage.'
+                },
+                {
+                    id: 'group_work',
+                    title: 'Group Work & Collaboration',
+                    icon: '👥',
+                    keywords: ['group', 'team', 'partner', 'collaborate', 'pull weight', 'pulling weight',
+                               'pull their weight', 'free rid', 'do their part', 'fair share', 'split work',
+                               'group project', 'group dynamic'],
+                    agreement: 'We pull our weight in group work — everyone contributes their fair share and communicates clearly with teammates.'
+                },
+                {
+                    id: 'grace',
+                    title: 'Grace & Good Faith',
+                    icon: '💛',
+                    keywords: ['grace', 'good faith', 'mistake', 'patience', 'patient', 'mess up', 'wrong answer',
+                               'safe to try', 'no wrong answer', 'second chance', 'learning environment'],
+                    agreement: "We extend grace to each other — this is a learning space where it's okay to ask questions, make mistakes, and grow."
+                }
+            ];
+            
+            const all = [
+                ...petPeeves.map(p => ({ ...p, source: 'peeve' })),
+                ...suggestions.map(s => ({ ...s, source: 'suggestion' }))
+            ];
+            
+            themes.forEach(t => { t.matches = []; t.count = 0; });
+            
+            all.forEach(item => {
+                if (!item.text) return;
+                const lower = item.text.toLowerCase();
+                let bestTheme = null;
+                let bestScore = 0;
+                themes.forEach(theme => {
+                    let score = 0;
+                    theme.keywords.forEach(kw => {
+                        if (lower.includes(kw)) score++;
+                    });
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTheme = theme;
+                    }
+                });
+                if (bestTheme && bestScore > 0) {
+                    bestTheme.matches.push(item);
+                    bestTheme.count++;
+                }
+            });
+            
+            return themes.filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+        }
+        
         function generateInsights(quizData) {
             const insights = {
                 policyInterests: {},
                 policyInterestStudents: {},
                 majors: {},
+                years: {},
+                yearStudents: {},
+                experienceLevels: {},
+                experienceLevelStudents: {},
                 hopes: [],
                 fears: [],
                 challenges: [],
@@ -2506,19 +2724,40 @@
                     }
                 });
                 
-                // Majors - normalize and categorize
-                const majorRaw = response['Year and Major'] || 'Unknown';
-                const major = normalizeMajor(majorRaw);
-                insights.majors[major] = (insights.majors[major] || 0) + 1;
+                // Year and major - try undergrad year field first, then grad year/major
+                const majorRaw = response['Year at UCLA? (Select all that apply)'] || response['Year and Major'] || '';
                 
-                // Track students by major (store both normalized and raw)
-                if (!insights.majorStudents) insights.majorStudents = {};
-                if (!insights.majorStudentsRaw) insights.majorStudentsRaw = {};
-                if (!insights.majorStudents[major]) insights.majorStudents[major] = [];
-                if (!insights.majorStudentsRaw[major]) insights.majorStudentsRaw[major] = [];
-                
-                insights.majorStudents[major].push(studentName);
-                insights.majorStudentsRaw[major].push(`${studentName} (${majorRaw})`);
+                // For undergrad: parse the multi-checkbox year field into clean categories
+                if (response['Year at UCLA? (Select all that apply)']) {
+                    const yearText = response['Year at UCLA? (Select all that apply)'] || '';
+                    const yearTags = [];
+                    const lower = yearText.toLowerCase();
+                    if (lower.includes('first year') || lower.includes('1st year') || lower.includes('freshman')) yearTags.push('1st Year');
+                    if (lower.includes('second year') || lower.includes('2nd year') || lower.includes('sophomore')) yearTags.push('2nd Year');
+                    if (lower.includes('third year') || lower.includes('3rd year') || lower.includes('junior')) yearTags.push('3rd Year');
+                    if (lower.includes('fourth year') || lower.includes('4th year') || lower.includes('senior')) yearTags.push('4th Year');
+                    if (lower.includes('fifth year') || lower.includes('5th year')) yearTags.push('5th+ Year');
+                    if (lower.includes('transfer')) yearTags.push('Transfer Student');
+                    if (lower.includes('graduating this quarter') || lower.includes('graduating')) yearTags.push('Graduating');
+                    
+                    if (yearTags.length === 0) yearTags.push('Unspecified');
+                    
+                    yearTags.forEach(tag => {
+                        insights.years[tag] = (insights.years[tag] || 0) + 1;
+                        if (!insights.yearStudents[tag]) insights.yearStudents[tag] = [];
+                        insights.yearStudents[tag].push(studentName);
+                    });
+                } else {
+                    // Grad form: use normalizeMajor for the legacy chart
+                    const major = normalizeMajor(majorRaw || 'Unknown');
+                    insights.majors[major] = (insights.majors[major] || 0) + 1;
+                    if (!insights.majorStudents) insights.majorStudents = {};
+                    if (!insights.majorStudentsRaw) insights.majorStudentsRaw = {};
+                    if (!insights.majorStudents[major]) insights.majorStudents[major] = [];
+                    if (!insights.majorStudentsRaw[major]) insights.majorStudentsRaw[major] = [];
+                    insights.majorStudents[major].push(studentName);
+                    insights.majorStudentsRaw[major].push(`${studentName} (${majorRaw})`);
+                }
                 
                 // Responsibilities - improved detection
                 const resp = (response['What sorts of responsibilities do you have outside of this class? '] || '').toLowerCase();
@@ -2543,13 +2782,13 @@
                     insights.responsibilityStudents['Heavy Course Load'].push(studentName);
                 }
                 
-                if (resp.includes('car') || resp.includes('famil') || resp.includes('parent') || resp.includes('child')) {
+                if (/\b(caring|caregiv|caretak|family|parent|child|kids|sibling|elderly)\b/.test(resp)) {
                     insights.responsibilities['Caregiving'] = (insights.responsibilities['Caregiving'] || 0) + 1;
                     if (!insights.responsibilityStudents['Caregiving']) insights.responsibilityStudents['Caregiving'] = [];
                     insights.responsibilityStudents['Caregiving'].push(studentName);
                 }
                 
-                if (resp.includes('research') || resp.includes('ra') || resp.includes('assistant')) {
+                if (resp.includes('research') || /\b(ra|research assistant)\b/.test(resp)) {
                     insights.responsibilities['Research Assistant'] = (insights.responsibilities['Research Assistant'] || 0) + 1;
                     if (!insights.responsibilityStudents['Research Assistant']) insights.responsibilityStudents['Research Assistant'] = [];
                     insights.responsibilityStudents['Research Assistant'].push(studentName);
@@ -2559,6 +2798,24 @@
                     insights.responsibilities['Volunteering/Community Work'] = (insights.responsibilities['Volunteering/Community Work'] || 0) + 1;
                     if (!insights.responsibilityStudents['Volunteering/Community Work']) insights.responsibilityStudents['Volunteering/Community Work'] = [];
                     insights.responsibilityStudents['Volunteering/Community Work'].push(studentName);
+                }
+                
+                if (resp.includes('extracurricular') || resp.includes('club') || resp.includes('student org')) {
+                    insights.responsibilities['Extracurriculars'] = (insights.responsibilities['Extracurriculars'] || 0) + 1;
+                    if (!insights.responsibilityStudents['Extracurriculars']) insights.responsibilityStudents['Extracurriculars'] = [];
+                    insights.responsibilityStudents['Extracurriculars'].push(studentName);
+                }
+                
+                if (resp.includes('internship') || resp.includes('intern ') || resp.endsWith('intern')) {
+                    insights.responsibilities['Internship'] = (insights.responsibilities['Internship'] || 0) + 1;
+                    if (!insights.responsibilityStudents['Internship']) insights.responsibilityStudents['Internship'] = [];
+                    insights.responsibilityStudents['Internship'].push(studentName);
+                }
+                
+                if (resp.includes('applying') || resp.includes('grad school') || resp.includes('law school') || resp.includes('lsat') || resp.includes('mcat') || resp.includes('gre')) {
+                    insights.responsibilities['Grad/Law School Apps'] = (insights.responsibilities['Grad/Law School Apps'] || 0) + 1;
+                    if (!insights.responsibilityStudents['Grad/Law School Apps']) insights.responsibilityStudents['Grad/Law School Apps'] = [];
+                    insights.responsibilityStudents['Grad/Law School Apps'].push(studentName);
                 }
                 
                 // Collect hopes, fears, challenges, and ground rules data
@@ -2575,6 +2832,12 @@
                 if (petPeeve) insights.petPeeves.push({ name: studentName, text: petPeeve });
                 if (groundRule) insights.groundRuleSuggestions.push({ name: studentName, text: groundRule });
                 if (priorQual) insights.priorQualExpStudents.push({ name: studentName, text: priorQual });
+                
+                // Categorize prior experience into None / Some / Significant / Extensive
+                const expLevel = categorizeExperience(priorQual);
+                insights.experienceLevels[expLevel] = (insights.experienceLevels[expLevel] || 0) + 1;
+                if (!insights.experienceLevelStudents[expLevel]) insights.experienceLevelStudents[expLevel] = [];
+                insights.experienceLevelStudents[expLevel].push({ name: studentName, raw: priorQual });
             });
             
             // Generate actionable insights from challenges (undergrad) or hopes+fears (grad)
@@ -3302,30 +3565,18 @@
                 return;
             }
             
-            // Populate student dropdown with ALL students (quiz + missing)
-            const studentSelect = document.getElementById('studentNameSelect');
-            studentSelect.innerHTML = '<option value="">Choose student...</option>';
-            
-            // Add quiz respondents
-            const allStudentNames = currentData.students.map(s => s.name);
-            
-            // Add missing students
-            if (currentData.missingStudents && currentData.missingStudents.length > 0) {
-                console.log('Adding missing students to dropdown:', currentData.missingStudents);
-                allStudentNames.push(...currentData.missingStudents);
-            }
-            
-            console.log('All student names for dropdown:', allStudentNames);
-            
-            // Sort alphabetically and populate dropdown
-            allStudentNames.sort().forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                studentSelect.appendChild(option);
+            // Sync existing student photos into croppedPhotos library
+            currentData.students.forEach(s => {
+                if (s.photo && !photoCropperState.croppedPhotos[s.name]) {
+                    photoCropperState.croppedPhotos[s.name] = s.photo;
+                }
             });
             
-            photoCropperState.studentsList = allStudentNames;
+            // Populate student dropdown with ALL students (quiz + missing)
+            populateCropperDropdown(currentData);
+            
+            // Update count to show existing photos
+            document.getElementById('photosSavedCount').textContent = Object.keys(photoCropperState.croppedPhotos).length;
             
             // Load image
             const reader = new FileReader();
@@ -3340,6 +3591,81 @@
             };
             reader.readAsDataURL(photoFile);
         }
+        
+        function populateCropperDropdown(currentData) {
+            const studentSelect = document.getElementById('studentNameSelect');
+            studentSelect.innerHTML = '<option value="">Choose student...</option>';
+            
+            const allStudentNames = currentData.students.map(s => s.name);
+            if (currentData.missingStudents && currentData.missingStudents.length > 0) {
+                allStudentNames.push(...currentData.missingStudents);
+            }
+            
+            // Sort: students without photos first, then those with photos (greyed)
+            const withoutPhoto = [];
+            const withPhoto = [];
+            allStudentNames.forEach(name => {
+                if (photoCropperState.croppedPhotos[name]) {
+                    withPhoto.push(name);
+                } else {
+                    withoutPhoto.push(name);
+                }
+            });
+            withoutPhoto.sort();
+            withPhoto.sort();
+            
+            withoutPhoto.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                studentSelect.appendChild(option);
+            });
+            
+            if (withPhoto.length > 0) {
+                const sep = document.createElement('option');
+                sep.disabled = true;
+                sep.textContent = '── Already have photos (re-crop to replace) ──';
+                studentSelect.appendChild(sep);
+                
+                withPhoto.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = '✓ ' + name;
+                    studentSelect.appendChild(option);
+                });
+            }
+            
+            photoCropperState.studentsList = allStudentNames;
+        }
+        
+        // Load a new screenshot mid-session without losing saved photos
+        document.getElementById('cropperNewScreenshot').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Replace the file in the main upload input so subsequent operations see it
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById('photoScreenshot').files = dt.files;
+            document.getElementById('photoScreenshotName').textContent = `✓ ${file.name}`;
+            
+            // Refresh dropdown (in case any names were added since open)
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (currentData) populateCropperDropdown(currentData);
+            
+            // Load the new image into the cropper
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    photoCropperState.image = img;
+                    initializeCropperCanvas();
+                    clearCropperSelection();
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
         
         function initializeCropperCanvas() {
             const canvas = document.getElementById('cropperCanvas');
@@ -3449,13 +3775,24 @@
             // Save to state
             photoCropperState.croppedPhotos[studentName] = photoDataUrl;
             
+            // Also apply directly to the student object so it survives across views
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (currentData && currentData.students) {
+                const student = currentData.students.find(s => s.name === studentName);
+                if (student) student.photo = photoDataUrl;
+            }
+            
             // Update count
             document.getElementById('photosSavedCount').textContent = Object.keys(photoCropperState.croppedPhotos).length;
             
+            // Refresh dropdown so this student moves to the "already have" section
+            if (currentData) populateCropperDropdown(currentData);
+            
+            // Persist immediately so a refresh doesn't lose work
+            autoSave();
+            
             // Clear selection
             clearCropperSelection();
-            
-            alert(`Photo saved for ${studentName}!`);
         });
         
         document.getElementById('clearSelectionBtn').addEventListener('click', () => {
@@ -3494,16 +3831,246 @@
                 });
                 
                 // Re-render dashboard with photos
-                renderStudents(currentData.students);
+                renderDashboard();
             }
             
             // Close cropper
             document.getElementById('photoCropperModal').style.display = 'none';
             
             autoSave();
-            alert(`Applied ${Object.keys(photoCropperState.croppedPhotos).length} photos to students!`);
+            const totalPhotos = Object.keys(photoCropperState.croppedPhotos).length;
+            alert(`✓ Done! ${totalPhotos} photo${totalPhotos === 1 ? '' : 's'} saved total.`);
         });
 
+        // ─── CHART RENDERING & EXPORT ───────────────────────────────────────
+        // Color palette for charts (consistent across all sections)
+        const CHART_COLORS = [
+            '#E74C3C', '#3498DB', '#F39C12', '#27AE60', '#9B59B6',
+            '#1ABC9C', '#E67E22', '#34495E', '#16A085', '#D35400',
+            '#8E44AD', '#2980B9', '#C0392B', '#7F8C8D', '#2C3E50'
+        ];
+        
+        function renderBarChartSection(opts) {
+            // opts: { title, icon, items: [[label, count], ...], total, studentMapping, type, subtitle, sectionId }
+            const section = document.createElement('div');
+            section.className = 'insight-section chart-export-target';
+            section.dataset.exportTitle = opts.title;
+            
+            const sortedItems = [...opts.items].sort((a, b) => b[1] - a[1]);
+            const maxCount = sortedItems.length > 0 ? sortedItems[0][1] : 1;
+            
+            const barsHTML = sortedItems.map(([label, count], i) => {
+                const pct = opts.total > 0 ? ((count / opts.total) * 100).toFixed(0) : 0;
+                const widthPct = (count / maxCount) * 100;
+                const color = CHART_COLORS[i % CHART_COLORS.length];
+                return `
+                    <div class="ds-bar-row" data-label="${escapeHtml(label)}" style="margin-bottom: 10px; cursor: ${opts.studentMapping ? 'pointer' : 'default'};">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9em;">
+                            <span style="font-weight: 500; color: #2C3E50;">${escapeHtml(label)}</span>
+                            <span style="color: #7f8c8d;"><strong style="color: ${color};">${count}</strong> · ${pct}%</span>
+                        </div>
+                        <div style="height: 18px; background: #f0f0f0; border-radius: 9px; overflow: hidden;">
+                            <div style="height: 100%; width: ${widthPct}%; background: ${color}; border-radius: 9px; transition: width 0.4s;"></div>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            section.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div class="insight-title" style="margin-bottom: 0;">${opts.icon || ''} ${opts.title}</div>
+                    <button class="ds-export-btn" style="background: #34495e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em; display: flex; align-items: center; gap: 5px;">
+                        📥 Export PNG
+                    </button>
+                </div>
+                ${opts.subtitle ? `<div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 12px;">${opts.subtitle}</div>` : ''}
+                <div class="ds-bars-container">
+                    ${barsHTML}
+                </div>
+            `;
+            
+            // Wire up click handlers for bars (drill-down)
+            setTimeout(() => {
+                if (opts.studentMapping) {
+                    section.querySelectorAll('.ds-bar-row').forEach(row => {
+                        row.addEventListener('click', () => {
+                            const label = row.dataset.label;
+                            const students = opts.studentMapping[label];
+                            if (students && students.length > 0) {
+                                showChartDrilldownModal(label, students, opts.type || 'item');
+                            }
+                        });
+                        row.addEventListener('mouseenter', () => { row.style.opacity = '0.8'; });
+                        row.addEventListener('mouseleave', () => { row.style.opacity = '1'; });
+                    });
+                }
+                
+                // Wire up export button
+                const exportBtn = section.querySelector('.ds-export-btn');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        exportChartAsPNG(opts.title, opts.icon || '', sortedItems, opts.total, opts.subtitle || '');
+                    });
+                }
+            }, 50);
+            
+            return section;
+        }
+        
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        
+        function showChartDrilldownModal(label, students, type) {
+            const modal = document.getElementById('studentModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            // Students may be array of strings OR array of objects {name, raw}
+            const items = students.map(s => typeof s === 'string' ? { name: s, raw: '' } : s);
+            
+            modalContent.innerHTML = `
+                <h2 style="margin-bottom: 10px; color: var(--primary);">${escapeHtml(label)}</h2>
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+                    <strong>${items.length} student${items.length === 1 ? '' : 's'}</strong>
+                </div>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    ${items.map(s => `
+                        <div style="padding: 12px 15px; background: #f8f9fa; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid var(--accent);">
+                            <strong style="color: var(--primary);">${escapeHtml(s.name)}</strong>
+                            ${s.raw ? `<div style="margin-top: 5px; font-style: italic; color: #555; font-size: 0.9em;">"${escapeHtml(s.raw)}"</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            modal.style.display = 'block';
+        }
+        
+        function exportChartAsPNG(title, icon, items, total, subtitle) {
+            // Render the chart to a standalone canvas for PNG export
+            const canvas = document.createElement('canvas');
+            const dpr = 2; // retina-quality
+            const width = 1200;
+            const rowHeight = 56;
+            const headerHeight = subtitle ? 130 : 100;
+            const footerHeight = 50;
+            const height = headerHeight + (items.length * rowHeight) + footerHeight;
+            
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            
+            // Background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Title
+            ctx.fillStyle = '#2C3E50';
+            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`${icon} ${title}`, 40, 40);
+            
+            // Subtitle
+            if (subtitle) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(subtitle, 40, 85);
+            }
+            
+            // Divider
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(40, headerHeight - 15);
+            ctx.lineTo(width - 40, headerHeight - 15);
+            ctx.stroke();
+            
+            // Bars
+            const maxCount = items.length > 0 ? items[0][1] : 1;
+            const labelWidth = 320;
+            const valueWidth = 120;
+            const barAreaX = 40 + labelWidth;
+            const barAreaWidth = width - barAreaX - valueWidth - 40;
+            
+            items.forEach(([label, count], i) => {
+                const y = headerHeight + (i * rowHeight);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                const barWidth = (count / maxCount) * barAreaWidth;
+                const color = CHART_COLORS[i % CHART_COLORS.length];
+                
+                // Label
+                ctx.fillStyle = '#2C3E50';
+                ctx.font = '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textBaseline = 'middle';
+                let displayLabel = label;
+                if (ctx.measureText(displayLabel).width > labelWidth - 20) {
+                    while (ctx.measureText(displayLabel + '…').width > labelWidth - 20 && displayLabel.length > 0) {
+                        displayLabel = displayLabel.slice(0, -1);
+                    }
+                    displayLabel += '…';
+                }
+                ctx.fillText(displayLabel, 40, y + rowHeight / 2);
+                
+                // Bar background
+                ctx.fillStyle = '#f0f0f0';
+                ctx.beginPath();
+                ctx.roundRect(barAreaX, y + rowHeight / 2 - 12, barAreaWidth, 24, 12);
+                ctx.fill();
+                
+                // Bar fill
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.roundRect(barAreaX, y + rowHeight / 2 - 12, Math.max(barWidth, 24), 24, 12);
+                ctx.fill();
+                
+                // Count + percent
+                ctx.fillStyle = '#2C3E50';
+                ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${count} · ${pct}%`, width - 40, y + rowHeight / 2);
+                ctx.textAlign = 'left';
+            });
+            
+            // Footer
+            ctx.fillStyle = '#bdc3c7';
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.fillText(`UCLA Student Dashboard · ${new Date().toLocaleDateString()} · n=${total}`, 40, height - 30);
+            
+            // Trigger download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const safeTitle = title.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+                a.href = url;
+                a.download = `${safeTitle}_${new Date().toISOString().slice(0,10)}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+        
+        // Polyfill for roundRect on older browsers (Safari < 16)
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+        // ─── END CHART RENDERING ────────────────────────────────────────────
+        
         function renderInsights(insights, totalStudents) {
             const container = document.getElementById('insightsList');
             container.innerHTML = '';
@@ -3565,167 +4132,236 @@
             `;
             container.appendChild(summarySection);
             
-            // Policy interests - show ALL, not just top 5
+            const isUndergrad = dashboardState.currentClass === 'undergrad-qual-methods';
+            
+            // Policy interests - new bar chart
             const topInterests = Object.entries(insights.policyInterests)
                 .sort((a, b) => b[1] - a[1]);
             
             if (topInterests.length > 0) {
-                const section = createClickableInsightSection('🎯 Policy Interests', topInterests, insights.policyInterestStudents);
+                // Convert policyInterestStudents (array of {name, raw}) into mapping for drilldown
+                const interestMap = {};
+                for (const [k, v] of Object.entries(insights.policyInterestStudents || {})) {
+                    interestMap[k] = v;
+                }
+                const section = renderBarChartSection({
+                    title: 'Policy Interests',
+                    icon: '🎯',
+                    items: topInterests,
+                    total: totalStudents,
+                    studentMapping: interestMap,
+                    type: 'interest',
+                    subtitle: 'Click any bar to see students interested in that area'
+                });
                 container.appendChild(section);
             }
             
-            // Majors (as bar chart)
-            const majorsList = Object.entries(insights.majors)
-                .sort((a, b) => b[1] - a[1]);
-            
-            if (majorsList.length > 0) {
-                const section = createClickableResponsibilitiesChart('Year & Major Distribution', majorsList, totalStudents, insights.majorStudentsRaw, 'major');
+            // Year distribution (undergrad) OR Year & Major chart (grad)
+            if (isUndergrad && Object.keys(insights.years || {}).length > 0) {
+                const yearItems = Object.entries(insights.years).sort((a, b) => b[1] - a[1]);
+                const section = renderBarChartSection({
+                    title: 'Year at UCLA',
+                    icon: '🎓',
+                    items: yearItems,
+                    total: totalStudents,
+                    studentMapping: insights.yearStudents,
+                    type: 'year',
+                    subtitle: 'Students may appear in multiple categories (e.g. transfer + senior)'
+                });
                 container.appendChild(section);
+            } else if (!isUndergrad) {
+                // Grad classes: keep the major chart
+                const majorsList = Object.entries(insights.majors).sort((a, b) => b[1] - a[1]);
+                if (majorsList.length > 0) {
+                    const section = renderBarChartSection({
+                        title: 'Year & Major Distribution',
+                        icon: '🎓',
+                        items: majorsList,
+                        total: totalStudents,
+                        studentMapping: insights.majorStudentsRaw,
+                        type: 'major'
+                    });
+                    container.appendChild(section);
+                }
             }
             
-            // Responsibilities
+            // Prior Experience - new categorized chart
+            if (Object.keys(insights.experienceLevels || {}).length > 0) {
+                // Order: No → Some → Significant → Extensive
+                const expOrder = ['No Experience', 'Some Experience', 'Significant', 'Extensive'];
+                const expItems = expOrder
+                    .filter(k => insights.experienceLevels[k])
+                    .map(k => [k, insights.experienceLevels[k]]);
+                
+                if (expItems.length > 0) {
+                    const section = renderBarChartSection({
+                        title: 'Prior Qualitative Methods Experience',
+                        icon: '🔬',
+                        items: expItems,
+                        total: totalStudents,
+                        studentMapping: insights.experienceLevelStudents,
+                        type: 'experience',
+                        subtitle: 'Auto-categorized from open-text responses · click to see what students wrote'
+                    });
+                    container.appendChild(section);
+                }
+            }
+            
+            // Responsibilities - new bar chart
             const respList = Object.entries(insights.responsibilities)
                 .sort((a, b) => b[1] - a[1]);
             
             if (respList.length > 0) {
-                const section = createClickableResponsibilitiesChart('Student Responsibilities', respList, totalStudents, insights.responsibilityStudents, 'responsibility');
+                const section = renderBarChartSection({
+                    title: 'Student Responsibilities',
+                    icon: '💼',
+                    items: respList,
+                    total: totalStudents,
+                    studentMapping: insights.responsibilityStudents,
+                    type: 'responsibility',
+                    subtitle: 'Click any bar to see students with that responsibility'
+                });
                 container.appendChild(section);
             }
             
-            // Prior Qualitative Experience (undergrad only)
-            if (insights.priorQualExpStudents && insights.priorQualExpStudents.length > 0) {
-                const priorSection = document.createElement('div');
-                priorSection.className = 'insight-section';
-                const withExp = insights.priorQualExpStudents.filter(s => s.text && s.text.trim().length > 10);
-                priorSection.innerHTML = `
-                    <div class="insight-title">🔬 Prior Qualitative Methods Experience</div>
-                    <div style="font-size:0.9em; color:#7f8c8d; margin-bottom:10px;">${withExp.length} of ${insights.priorQualExpStudents.length + (insights.majors ? Object.values(insights.majors).reduce((a,b)=>a+b,0) - insights.priorQualExpStudents.length : 0)} students report prior experience</div>
-                    <div style="max-height:200px; overflow-y:auto;">
-                        ${withExp.map(s => `
-                            <div style="padding:10px; background:#f8f9fa; margin-bottom:8px; border-radius:6px; border-left:3px solid #3498db;">
-                                <strong style="font-size:0.9em;">${s.name}</strong>
-                                <div style="font-size:0.85em; color:#555; margin-top:3px;">${s.text}</div>
-                            </div>`).join('')}
-                    </div>`;
-                container.appendChild(priorSection);
-            }
-
             // Actionable Insights
             if (insights.actionableInsights && insights.actionableInsights.length > 0) {
                 const section = createActionableInsightsSection(insights.actionableInsights);
                 container.appendChild(section);
             }
 
-            // Ground Rules section — always show for undergrad classes
+            // Ground Rules section — clustered themes for undergrad
             const currentClassKey = dashboardState.currentClass;
             const isUndergradClass = currentClassKey === 'undergrad-qual-methods';
-            if (isUndergradClass) {
+            const hasPetPeeves = insights.petPeeves && insights.petPeeves.length > 0;
+            const hasGroundRules = insights.groundRuleSuggestions && insights.groundRuleSuggestions.length > 0;
+            
+            if (isUndergradClass || hasPetPeeves || hasGroundRules) {
                 const grSection = document.createElement('div');
                 grSection.className = 'insight-section';
-                const hasPetPeeves = insights.petPeeves && insights.petPeeves.length > 0;
-                const hasGroundRules = insights.groundRuleSuggestions && insights.groundRuleSuggestions.length > 0;
                 
                 if (hasPetPeeves || hasGroundRules) {
-                    const INITIAL_SHOW = 8;
+                    const themes = clusterGroundRules(insights.petPeeves || [], insights.groundRuleSuggestions || []);
+                    const totalResponses = (insights.petPeeves || []).length + (insights.groundRuleSuggestions || []).length;
                     
-                    // Build pet peeves list
-                    let petPeevesHTML = '';
-                    if (hasPetPeeves) {
-                        const topPeeves = insights.petPeeves.slice(0, INITIAL_SHOW);
-                        const morePeeves = insights.petPeeves.slice(INITIAL_SHOW);
-                        petPeevesHTML = `
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: var(--primary); margin-bottom: 10px;">😤 Pet Peeves (${insights.petPeeves.length})</h4>
-                                <div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 8px;">In classes I hate it when...</div>
-                                <div class="peeves-list">
-                                    ${topPeeves.map(p => `
-                                        <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
-                                            <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                ${morePeeves.length > 0 ? `
-                                    <div class="peeves-overflow" style="display: none;">
-                                        ${morePeeves.map(p => `
-                                            <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
-                                                <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    <button class="peeves-show-more" style="background: none; border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: var(--primary); font-size: 0.85em; margin-top: 8px;">Show ${morePeeves.length} more ▼</button>
-                                ` : ''}
-                            </div>
-                        `;
-                    }
+                    // Build the proposed agreements (top 5-7 themes)
+                    const topThemes = themes.slice(0, 7);
                     
-                    // Build ground rules suggestions list
-                    let suggestionsHTML = '';
-                    if (hasGroundRules) {
-                        const topSugg = insights.groundRuleSuggestions.slice(0, INITIAL_SHOW);
-                        const moreSugg = insights.groundRuleSuggestions.slice(INITIAL_SHOW);
-                        suggestionsHTML = `
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: var(--primary); margin-bottom: 10px;">📝 Suggested Ground Rules (${insights.groundRuleSuggestions.length})</h4>
-                                <div class="suggestions-list">
-                                    ${topSugg.map(s => `
-                                        <div style="padding: 8px 12px; background: #f0fff4; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #27ae60; font-size: 0.9em;">
-                                            <strong style="font-size: 0.85em; color: #666;">${s.name}:</strong> ${s.text}
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                ${moreSugg.length > 0 ? `
-                                    <div class="suggestions-overflow" style="display: none;">
-                                        ${moreSugg.map(s => `
-                                            <div style="padding: 8px 12px; background: #f0fff4; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #27ae60; font-size: 0.9em;">
-                                                <strong style="font-size: 0.85em; color: #666;">${s.name}:</strong> ${s.text}
-                                            </div>
-                                        `).join('')}
+                    let agreementsHTML = topThemes.map((t, i) => `
+                        <div class="theme-card" data-theme-id="${t.id}" style="background: white; border: 1px solid #e0e0e0; border-left: 5px solid #27AE60; border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                        <span style="background: #27AE60; color: white; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85em;">${i+1}</span>
+                                        <strong style="color: #2C3E50; font-size: 1.05em;">${t.icon} ${escapeHtml(t.title)}</strong>
                                     </div>
-                                    <button class="suggestions-show-more" style="background: none; border: 1px solid #ddd; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: var(--primary); font-size: 0.85em; margin-top: 8px;">Show ${moreSugg.length} more ▼</button>
-                                ` : ''}
+                                    <p style="margin: 8px 0 0 36px; color: #34495E; line-height: 1.5;">${escapeHtml(t.agreement)}</p>
+                                </div>
+                                <div style="text-align: right; flex-shrink: 0;">
+                                    <div style="background: #ecf0f1; color: #2C3E50; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">${t.count} mention${t.count === 1 ? '' : 's'}</div>
+                                    <div style="font-size: 0.75em; color: #95a5a6; margin-top: 4px;">click to see quotes</div>
+                                </div>
                             </div>
-                        `;
-                    }
+                        </div>
+                    `).join('');
+                    
+                    // Unclustered responses (didn't match any theme)
+                    const allResponses = [
+                        ...(insights.petPeeves || []).map(p => ({ ...p, source: 'peeve' })),
+                        ...(insights.groundRuleSuggestions || []).map(s => ({ ...s, source: 'suggestion' }))
+                    ];
+                    const matchedTexts = new Set();
+                    themes.forEach(t => t.matches.forEach(m => matchedTexts.add(m.text)));
+                    const unclustered = allResponses.filter(r => r.text && !matchedTexts.has(r.text));
                     
                     grSection.innerHTML = `
-                        <div class="insight-title">📋 Class Ground Rules</div>
-                        <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 15px;">${insights.petPeeves.length} pet peeve responses &amp; ${insights.groundRuleSuggestions.length} suggested ground rules collected</div>
-                        ${petPeevesHTML}
-                        ${suggestionsHTML}
-                        <div style="text-align: center; padding-top: 15px; border-top: 1px dashed #ddd;">
-                            <button onclick="openGroundRulesModal()" style="background: linear-gradient(135deg, #E74C3C, #c0392b); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:0.9em;">✨ Synthesize into Class Agreements with AI</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div class="insight-title" style="margin-bottom: 0;">📋 Proposed Class Agreements</div>
+                            <button class="ds-export-gr-btn" style="background: #34495e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">📥 Export PNG</button>
+                        </div>
+                        <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 16px;">
+                            Auto-clustered from ${insights.petPeeves.length} pet peeves and ${insights.groundRuleSuggestions.length} ground rule suggestions into ${topThemes.length} themes. Click any agreement to see the student quotes that informed it.
+                        </div>
+                        
+                        <div class="theme-cards-container">
+                            ${agreementsHTML}
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
+                            <button class="gr-show-raw" style="flex: 1; background: white; border: 1px solid #ddd; padding: 10px 16px; border-radius: 8px; cursor: pointer; color: #2C3E50; font-size: 0.9em;">📝 View All Raw Responses (${totalResponses})</button>
+                            <button onclick="openGroundRulesModal()" style="flex: 1; background: linear-gradient(135deg, #9B59B6, #8E44AD); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em;">✨ Re-synthesize with AI</button>
+                        </div>
+                        
+                        <div class="raw-responses-panel" style="display: none; margin-top: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px;">
+                            ${insights.petPeeves.length > 0 ? `
+                                <h4 style="color: #c0392b; margin-bottom: 10px; font-size: 0.95em;">😤 Pet Peeves (${insights.petPeeves.length})</h4>
+                                <div style="max-height: 250px; overflow-y: auto; margin-bottom: 16px;">
+                                    ${insights.petPeeves.map(p => `
+                                        <div style="padding: 8px 12px; background: white; margin-bottom: 5px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.85em;">
+                                            <strong style="color: #666;">${escapeHtml(p.name)}:</strong> ${escapeHtml(p.text)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${insights.groundRuleSuggestions.length > 0 ? `
+                                <h4 style="color: #27AE60; margin-bottom: 10px; font-size: 0.95em;">📝 Suggested Ground Rules (${insights.groundRuleSuggestions.length})</h4>
+                                <div style="max-height: 250px; overflow-y: auto;">
+                                    ${insights.groundRuleSuggestions.map(s => `
+                                        <div style="padding: 8px 12px; background: white; margin-bottom: 5px; border-radius: 6px; border-left: 3px solid #27AE60; font-size: 0.85em;">
+                                            <strong style="color: #666;">${escapeHtml(s.name)}:</strong> ${escapeHtml(s.text)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${unclustered.length > 0 ? `
+                                <h4 style="color: #7f8c8d; margin-top: 16px; margin-bottom: 10px; font-size: 0.95em;">❓ Didn't fit a theme (${unclustered.length})</h4>
+                                <div style="max-height: 200px; overflow-y: auto;">
+                                    ${unclustered.map(s => `
+                                        <div style="padding: 8px 12px; background: white; margin-bottom: 5px; border-radius: 6px; border-left: 3px solid #95a5a6; font-size: 0.85em;">
+                                            <strong style="color: #666;">${escapeHtml(s.name)}:</strong> ${escapeHtml(s.text)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                     
-                    // Add show more handlers
+                    // Wire up handlers
                     setTimeout(() => {
-                        const peevesBtn = grSection.querySelector('.peeves-show-more');
-                        if (peevesBtn) {
-                            peevesBtn.addEventListener('click', () => {
-                                const overflow = grSection.querySelector('.peeves-overflow');
-                                if (overflow.style.display === 'none') {
-                                    overflow.style.display = 'block';
-                                    peevesBtn.textContent = 'Show fewer ▲';
+                        // Theme card clicks → modal with quotes
+                        grSection.querySelectorAll('.theme-card').forEach(card => {
+                            const themeId = card.dataset.themeId;
+                            const theme = topThemes.find(t => t.id === themeId);
+                            card.addEventListener('mouseenter', () => { card.style.transform = 'translateX(4px)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; });
+                            card.addEventListener('mouseleave', () => { card.style.transform = 'translateX(0)'; card.style.boxShadow = 'none'; });
+                            card.addEventListener('click', () => {
+                                showThemeQuotesModal(theme);
+                            });
+                        });
+                        
+                        // Show/hide raw responses
+                        const rawBtn = grSection.querySelector('.gr-show-raw');
+                        const rawPanel = grSection.querySelector('.raw-responses-panel');
+                        if (rawBtn && rawPanel) {
+                            rawBtn.addEventListener('click', () => {
+                                if (rawPanel.style.display === 'none') {
+                                    rawPanel.style.display = 'block';
+                                    rawBtn.textContent = '🔼 Hide Raw Responses';
                                 } else {
-                                    overflow.style.display = 'none';
-                                    peevesBtn.textContent = `Show ${morePeeves.length} more ▼`;
+                                    rawPanel.style.display = 'none';
+                                    rawBtn.textContent = `📝 View All Raw Responses (${totalResponses})`;
                                 }
                             });
                         }
-                        const suggBtn = grSection.querySelector('.suggestions-show-more');
-                        if (suggBtn) {
-                            suggBtn.addEventListener('click', () => {
-                                const overflow = grSection.querySelector('.suggestions-overflow');
-                                if (overflow.style.display === 'none') {
-                                    overflow.style.display = 'block';
-                                    suggBtn.textContent = 'Show fewer ▲';
-                                } else {
-                                    overflow.style.display = 'none';
-                                    suggBtn.textContent = `Show ${moreSugg.length} more ▼`;
-                                }
+                        
+                        // Export ground rules as PNG
+                        const exportBtn = grSection.querySelector('.ds-export-gr-btn');
+                        if (exportBtn) {
+                            exportBtn.addEventListener('click', () => {
+                                exportGroundRulesAsPNG(topThemes, insights.petPeeves.length, insights.groundRuleSuggestions.length);
                             });
                         }
-                    }, 100);
+                    }, 50);
                 } else {
                     grSection.innerHTML = `
                         <div class="insight-title">📋 Class Ground Rules</div>
@@ -3736,27 +4372,149 @@
                         </div>`;
                 }
                 container.appendChild(grSection);
-            } else if (insights.petPeeves && (insights.petPeeves.length > 0 || insights.groundRuleSuggestions.length > 0)) {
-                // Non-undergrad but has ground rules data
-                const grSection = document.createElement('div');
-                grSection.className = 'insight-section';
-                grSection.innerHTML = `
-                    <div class="insight-title">📋 Class Ground Rules</div>
-                    <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px;">${insights.petPeeves.length} pet peeve responses &amp; ${insights.groundRuleSuggestions.length} suggested ground rules</div>
-                    ${insights.petPeeves.length > 0 ? `
-                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
-                            ${insights.petPeeves.map(p => `
-                                <div style="padding: 8px 12px; background: #fff5f5; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 0.9em;">
-                                    <strong style="font-size: 0.85em; color: #666;">${p.name}:</strong> ${p.text}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                    <div style="text-align: center;">
-                        <button onclick="openGroundRulesModal()" style="background: linear-gradient(135deg, #E74C3C, #c0392b); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:0.9em;">✨ Synthesize with AI</button>
-                    </div>`;
-                container.appendChild(grSection);
             }
+        }
+        
+        function showThemeQuotesModal(theme) {
+            const modal = document.getElementById('studentModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            const quotesByStudent = theme.matches.map(m => `
+                <div style="padding: 12px 15px; background: #f8f9fa; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid ${m.source === 'peeve' ? '#e74c3c' : '#27AE60'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="color: var(--primary);">${escapeHtml(m.name)}</strong>
+                        <span style="font-size: 0.75em; color: #95a5a6; background: white; padding: 2px 8px; border-radius: 10px;">${m.source === 'peeve' ? '😤 pet peeve' : '📝 suggestion'}</span>
+                    </div>
+                    <div style="font-style: italic; color: #555; font-size: 0.9em;">"${escapeHtml(m.text)}"</div>
+                </div>
+            `).join('');
+            
+            modalContent.innerHTML = `
+                <h2 style="margin-bottom: 6px; color: var(--primary);">${theme.icon} ${escapeHtml(theme.title)}</h2>
+                <div style="background: #e8f5e9; padding: 14px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27AE60;">
+                    <div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 4px;">Proposed agreement:</div>
+                    <div style="color: #2C3E50; font-weight: 500;">${escapeHtml(theme.agreement)}</div>
+                </div>
+                <h3 style="margin-bottom: 12px; color: #34495e; font-size: 1em;">Student responses that informed this (${theme.count}):</h3>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    ${quotesByStudent}
+                </div>
+            `;
+            modal.style.display = 'block';
+        }
+        
+        function exportGroundRulesAsPNG(themes, peevesCount, suggestionsCount) {
+            const canvas = document.createElement('canvas');
+            const dpr = 2;
+            const width = 1200;
+            const headerHeight = 140;
+            const themeHeight = 110;
+            const footerHeight = 50;
+            const height = headerHeight + (themes.length * themeHeight) + footerHeight;
+            
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            
+            // Background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Title
+            ctx.fillStyle = '#2C3E50';
+            ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'top';
+            ctx.fillText('📋 Proposed Class Agreements', 40, 40);
+            
+            // Subtitle
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.fillText(`Synthesized from ${peevesCount} pet peeves and ${suggestionsCount} student suggestions`, 40, 90);
+            
+            // Themes
+            themes.forEach((t, i) => {
+                const y = headerHeight + (i * themeHeight);
+                
+                // Card background
+                ctx.fillStyle = '#f8fdf9';
+                ctx.beginPath();
+                ctx.roundRect(40, y, width - 80, themeHeight - 14, 10);
+                ctx.fill();
+                
+                // Left border
+                ctx.fillStyle = '#27AE60';
+                ctx.fillRect(40, y, 5, themeHeight - 14);
+                
+                // Number circle
+                ctx.fillStyle = '#27AE60';
+                ctx.beginPath();
+                ctx.arc(80, y + 30, 16, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(String(i + 1), 80, y + 30);
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                // Title
+                ctx.fillStyle = '#2C3E50';
+                ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(`${t.icon}  ${t.title}`, 110, y + 18);
+                
+                // Mention count badge
+                const badgeText = `${t.count} mention${t.count === 1 ? '' : 's'}`;
+                ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                const badgeW = ctx.measureText(badgeText).width + 20;
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.roundRect(width - 40 - badgeW - 10, y + 16, badgeW, 24, 12);
+                ctx.fill();
+                ctx.fillStyle = '#2C3E50';
+                ctx.textAlign = 'center';
+                ctx.fillText(badgeText, width - 40 - badgeW/2 - 10, y + 22);
+                ctx.textAlign = 'left';
+                
+                // Agreement (with word wrap)
+                ctx.fillStyle = '#34495E';
+                ctx.font = '17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                wrapText(ctx, t.agreement, 110, y + 52, width - 170, 22);
+            });
+            
+            // Footer
+            ctx.fillStyle = '#bdc3c7';
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.fillText(`UCLA Student Dashboard · ${new Date().toLocaleDateString()}`, 40, height - 30);
+            
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `class_agreements_${new Date().toISOString().slice(0,10)}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+        
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let curY = y;
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    ctx.fillText(line, x, curY);
+                    line = words[n] + ' ';
+                    curY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, x, curY);
         }
 
         function createInsightSection(title, items) {
