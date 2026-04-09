@@ -49,42 +49,6 @@
         #passwordScreen .pw-btn:hover { background: #c0392b; }
         #passwordScreen .pw-error { color: var(--danger); margin-top: 10px; display: none; font-size: 0.9em; }
 
-        /* ─── ATTENDANCE TAB STYLES ─── */
-        .attendance-panel { padding: 20px; }
-        .attendance-header { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-        .attendance-date-btn {
-            padding: 8px 16px; border-radius: 20px; border: 2px solid var(--primary);
-            cursor: pointer; font-size: 0.9em; transition: all 0.2s; background: white; color: var(--primary);
-        }
-        .attendance-date-btn.active { background: var(--primary); color: white; }
-        .attendance-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-        }
-        .attendance-card {
-            padding: 10px 14px; border-radius: 8px; border: 2px solid #e0e0e0;
-            display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;
-            font-size: 0.95em;
-        }
-        .attendance-card:hover { border-color: var(--primary); }
-        .attendance-card.present { background: #d5f4e6; border-color: var(--success); }
-        .attendance-card.absent { background: #fff; border-color: #e0e0e0; }
-        .attendance-card .att-photo {
-            width: 36px; height: 36px; border-radius: 50%; background: #95a5a6;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: bold; font-size: 0.8em; flex-shrink: 0;
-            object-fit: cover;
-        }
-        .attendance-card .att-check {
-            margin-left: auto; font-size: 1.3em;
-        }
-        .attendance-stats {
-            display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;
-        }
-        .attendance-stat-box {
-            padding: 15px 25px; border-radius: 8px; text-align: center; min-width: 120px;
-        }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -551,12 +515,6 @@
         <div class="dashboard" id="dashboard">
             <div class="tabs" id="classTabs"></div>
             
-            <!-- View Switcher: Students vs Attendance -->
-            <div id="viewSwitcher" style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 3px solid #e0e0e0;">
-                <button class="tab active" id="viewStudentsTab" style="flex:1; text-align:center;">👥 Student Profiles</button>
-                <button class="tab" id="viewAttendanceTab" style="flex:1; text-align:center;">📋 Attendance</button>
-            </div>
-
             <!-- Students View -->
             <div id="studentsView">
             <div class="dashboard-grid">
@@ -570,6 +528,8 @@
                                 <option value="lastname">Last Name (A-Z)</option>
                                 <option value="risk-high">Risk (High to Low)</option>
                                 <option value="risk-low">Risk (Low to High)</option>
+                                <option value="missing-quiz">Missing Quiz First</option>
+                                <option value="not-enrolled">Quiz But Not Enrolled First</option>
                             </select>
                         </div>
                         <div id="sectionFilterContainer" style="display: none; margin-bottom: 15px;">
@@ -587,41 +547,6 @@
                     </div>
                 </div>
             </div>
-            </div>
-
-            <!-- Attendance View -->
-            <div id="attendanceView" style="display: none;">
-                <div class="panel attendance-panel">
-                    <h2 class="panel-title">📋 Attendance & Participation Tracker</h2>
-                    
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
-                        <button class="btn" id="addAttendanceDateBtn" style="background: var(--success); padding: 10px 18px; font-size: 0.9em; margin: 0;">+ New Session</button>
-                        <button class="btn" id="uploadPollEverywhereBtn" style="background: #9b59b6; padding: 10px 18px; font-size: 0.9em; margin: 0;">📊 Upload Poll Everywhere</button>
-                        <input type="file" id="pollEverywhereFile" accept=".csv,.xlsx,.xls" style="display:none;">
-                        <button class="btn" id="exportAttendanceBtn" style="background: var(--secondary); padding: 10px 18px; font-size: 0.9em; margin: 0;">📥 Export CSV</button>
-                    </div>
-
-                    <!-- Session type toggle -->
-                    <div style="display: flex; gap: 0; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; max-width: 300px;">
-                        <button id="attLectureToggle" style="flex:1; padding: 10px; border: none; cursor: pointer; font-weight: bold; background: var(--primary); color: white; transition: all 0.2s;">📖 Lecture</button>
-                        <button id="attSectionToggle" style="flex:1; padding: 10px; border: none; cursor: pointer; font-weight: bold; background: #f0f0f0; color: #666; transition: all 0.2s;">🗂 Section</button>
-                    </div>
-                    
-                    <div id="attendanceDates" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;"></div>
-                    
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
-                        <button class="btn" id="markAllPresentBtn" style="background: #16a085; padding: 8px 14px; font-size: 0.85em; margin: 0;">✓ Mark All Present</button>
-                        <button class="btn" id="markAllAbsentBtn" style="background: #95a5a6; padding: 8px 14px; font-size: 0.85em; margin: 0;">✗ Clear All</button>
-                        <div id="attSectionFilter" style="display: none; margin-left: 10px;"></div>
-                    </div>
-
-                    <div id="attendanceStats" class="attendance-stats"></div>
-                    
-                    <div id="attendanceGrid" class="attendance-grid"></div>
-
-                    <!-- Running totals table -->
-                    <div id="attendanceTotals" style="margin-top: 30px;"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -873,7 +798,7 @@
             // Header subtitle
             document.getElementById('headerSubtitle').textContent = isAdmin
                 ? 'Upload your data to generate insights about your students'
-                : 'Student profiles, attendance, and class insights';
+                : 'Student profiles and class insights';
             
             // If TA, auto-load saved dashboard for their class
             if (isTA && currentTAClass) {
@@ -882,7 +807,6 @@
                     try {
                         const saveData = JSON.parse(raw);
                         dashboardState.classes = saveData.classes || {};
-                        dashboardState.attendance = saveData.attendance || {};
                         if (saveData.croppedPhotos) {
                             photoCropperState.croppedPhotos = saveData.croppedPhotos;
                             for (const cls of Object.values(dashboardState.classes)) {
@@ -1033,8 +957,7 @@
         // ─── DASHBOARD STATE ─────────────────────────────────────────
         const dashboardState = {
             classes: {},
-            currentClass: null,
-            attendance: {} // { classKey: { dates: ['2026-04-01', ...], records: { '2026-04-01': { 'Student Name': true/false } } } }
+            currentClass: null
         };
         
         // Photo cropper state
@@ -1051,22 +974,6 @@
             studentsList: []
         };
 
-        // ─── VIEW SWITCHING (Students vs Attendance) ─────────────────
-        document.getElementById('viewStudentsTab').addEventListener('click', () => {
-            document.getElementById('viewStudentsTab').classList.add('active');
-            document.getElementById('viewAttendanceTab').classList.remove('active');
-            document.getElementById('studentsView').style.display = 'block';
-            document.getElementById('attendanceView').style.display = 'none';
-        });
-
-        document.getElementById('viewAttendanceTab').addEventListener('click', () => {
-            document.getElementById('viewAttendanceTab').classList.add('active');
-            document.getElementById('viewStudentsTab').classList.remove('active');
-            document.getElementById('studentsView').style.display = 'none';
-            document.getElementById('attendanceView').style.display = 'block';
-            renderAttendance();
-        });
-
         // ─── SAVE / LOAD DASHBOARD ───────────────────────────────────
         // Reusable save function
         function saveDashboardToStorage() {
@@ -1075,7 +982,6 @@
                     version: 2,
                     savedAt: new Date().toISOString(),
                     classes: {},
-                    attendance: dashboardState.attendance,
                     croppedPhotos: photoCropperState.croppedPhotos
                 };
                 for (const [key, cls] of Object.entries(dashboardState.classes)) {
@@ -1130,7 +1036,6 @@
             try {
                 const saveData = JSON.parse(raw);
                 dashboardState.classes = saveData.classes;
-                dashboardState.attendance = saveData.attendance || {};
                 if (saveData.croppedPhotos) {
                     photoCropperState.croppedPhotos = saveData.croppedPhotos;
                     // Re-apply photos to student objects
@@ -1331,317 +1236,6 @@
             alert('Test data loaded: 30 students across 5 sections with pet peeves, ground rules, and 3 missing students.');
         }
 
-        // ─── ATTENDANCE SYSTEM ───────────────────────────────────────
-        function getAttendanceData() {
-            const cls = dashboardState.currentClass;
-            if (!cls) return null;
-            if (!dashboardState.attendance[cls]) {
-                dashboardState.attendance[cls] = { dates: [], records: {}, activeDate: null };
-            }
-            return dashboardState.attendance[cls];
-        }
-
-        function getAllStudentNames() {
-            const currentData = dashboardState.classes[dashboardState.currentClass];
-            if (!currentData) return [];
-            const names = currentData.students.map(s => s.name);
-            if (currentData.missingStudents) names.push(...currentData.missingStudents);
-            return names.sort();
-        }
-
-        document.getElementById('addAttendanceDateBtn').addEventListener('click', () => {
-            const att = getAttendanceData();
-            if (!att) return;
-            const today = new Date().toISOString().split('T')[0];
-            const dateStr = prompt('Enter date for this session (YYYY-MM-DD):', today);
-            if (!dateStr) return;
-            // Ask session type
-            const sessionType = prompt('Session type? Enter "lecture" or "section":', 'lecture');
-            if (!sessionType || !['lecture', 'section'].includes(sessionType.toLowerCase().trim())) {
-                alert('Please enter "lecture" or "section".');
-                return;
-            }
-            const key = dateStr + '|' + sessionType.toLowerCase().trim();
-            if (att.dates.includes(key)) {
-                att.activeDate = key;
-                renderAttendance();
-                return;
-            }
-            att.dates.push(key);
-            att.dates.sort();
-            att.records[key] = {};
-            getAllStudentNames().forEach(name => { att.records[key][name] = false; });
-            att.activeDate = key;
-            renderAttendance();
-        });
-
-        document.getElementById('uploadPollEverywhereBtn').addEventListener('click', () => {
-            document.getElementById('pollEverywhereFile').click();
-        });
-
-        document.getElementById('pollEverywhereFile').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const att = getAttendanceData();
-            if (!att || !att.activeDate) {
-                alert('Please create or select an attendance session first.');
-                return;
-            }
-            try {
-                const data = await parsePollEverywhereFile(file);
-                const allNames = getAllStudentNames();
-                let matched = 0;
-                data.forEach(pollName => {
-                    // Fuzzy match poll name to roster
-                    const normalizedPoll = normalizeName(pollName);
-                    const pollParts = normalizedPoll.split(' ').filter(p => p.length > 0);
-                    for (const rosterName of allNames) {
-                        const normalizedRoster = normalizeName(rosterName);
-                        const rosterParts = normalizedRoster.split(' ').filter(p => p.length > 0);
-                        let matchCount = 0;
-                        for (const pp of pollParts) {
-                            for (const rp of rosterParts) {
-                                if (namesMatch(pp, rp)) { matchCount++; break; }
-                            }
-                        }
-                        if (matchCount >= 2) {
-                            att.records[att.activeDate][rosterName] = true;
-                            matched++;
-                            break;
-                        }
-                    }
-                });
-                renderAttendance();
-                autoSave();
-                alert(`Poll Everywhere: matched ${matched} of ${data.length} participants to your roster.`);
-            } catch (err) {
-                alert('Error parsing file: ' + err.message);
-            }
-            e.target.value = '';
-        });
-
-        async function parsePollEverywhereFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                        
-                        // Try to find a name column — look for headers containing "name", "participant", "student"
-                        const header = rows[0] || [];
-                        let nameCol = -1;
-                        for (let i = 0; i < header.length; i++) {
-                            const h = String(header[i]).toLowerCase();
-                            if (h.includes('name') || h.includes('participant') || h.includes('student') || h.includes('first') || h.includes('screen')) {
-                                nameCol = i;
-                                break;
-                            }
-                        }
-                        
-                        // If no header match, check if col 0 or 1 has names
-                        if (nameCol === -1) {
-                            // Heuristic: if row 1 col 0 has a space (first last), use it
-                            if (rows.length > 1 && String(rows[1][0] || '').includes(' ')) nameCol = 0;
-                            else if (rows.length > 1 && String(rows[1][1] || '').includes(' ')) nameCol = 1;
-                            else nameCol = 0; // fallback
-                        }
-                        
-                        // Also check for first+last in separate columns
-                        let firstCol = -1, lastCol = -1;
-                        for (let i = 0; i < header.length; i++) {
-                            const h = String(header[i]).toLowerCase();
-                            if (h === 'first name' || h === 'first') firstCol = i;
-                            if (h === 'last name' || h === 'last') lastCol = i;
-                        }
-                        
-                        const names = [];
-                        for (let r = 1; r < rows.length; r++) {
-                            let name;
-                            if (firstCol >= 0 && lastCol >= 0) {
-                                name = ((rows[r][firstCol] || '') + ' ' + (rows[r][lastCol] || '')).trim();
-                            } else {
-                                name = String(rows[r][nameCol] || '').trim();
-                            }
-                            if (name && name.length > 2) names.push(name);
-                        }
-                        resolve(names);
-                    } catch (err) { reject(err); }
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        document.getElementById('markAllPresentBtn').addEventListener('click', () => {
-            const att = getAttendanceData();
-            if (!att || !att.activeDate) return;
-            getAllStudentNames().forEach(name => { att.records[att.activeDate][name] = true; });
-            autoSave();
-            renderAttendance();
-        });
-
-        document.getElementById('markAllAbsentBtn').addEventListener('click', () => {
-            const att = getAttendanceData();
-            if (!att || !att.activeDate) return;
-            getAllStudentNames().forEach(name => { att.records[att.activeDate][name] = false; });
-            autoSave();
-            renderAttendance();
-        });
-
-        document.getElementById('exportAttendanceBtn').addEventListener('click', () => {
-            const att = getAttendanceData();
-            if (!att || att.dates.length === 0) { alert('No attendance data to export.'); return; }
-            const names = getAllStudentNames();
-            
-            // Build header with session type labels
-            const dateHeaders = att.dates.map(d => {
-                const parts = d.split('|');
-                const type = (parts[1] || 'lecture').charAt(0).toUpperCase();
-                return `${type}-${parts[0]}`;
-            });
-            
-            const lectureDates = att.dates.filter(d => (d.split('|')[1] || 'lecture') === 'lecture');
-            const sectionDates = att.dates.filter(d => (d.split('|')[1] || '') === 'section');
-            
-            let csv = 'Student,' + dateHeaders.join(',') + ',Lecture Present,Lecture Total,Section Present,Section Total,Total Points\n';
-            names.forEach(name => {
-                const row = ['"' + name + '"'];
-                let lecturePresent = 0, sectionPresent = 0;
-                att.dates.forEach(d => {
-                    const val = att.records[d] && att.records[d][name] ? 'P' : 'A';
-                    row.push(val);
-                    if (val === 'P') {
-                        const type = (d.split('|')[1] || 'lecture');
-                        if (type === 'lecture') lecturePresent++;
-                        else sectionPresent++;
-                    }
-                });
-                row.push(lecturePresent);
-                row.push(lectureDates.length);
-                row.push(sectionPresent);
-                row.push(sectionDates.length);
-                row.push(lecturePresent + sectionPresent);
-                csv += row.join(',') + '\n';
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `attendance_${dashboardState.currentClass}_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        function renderAttendance() {
-            const att = getAttendanceData();
-            if (!att) return;
-            const currentData = dashboardState.classes[dashboardState.currentClass];
-            if (!currentData) return;
-
-            // Date tabs
-            const datesEl = document.getElementById('attendanceDates');
-            datesEl.innerHTML = '';
-            if (att.dates.length === 0) {
-                datesEl.innerHTML = '<div style="color: #7f8c8d; padding: 10px;">No sessions yet. Click "+ New Session" to start tracking attendance.</div>';
-            }
-            att.dates.forEach(d => {
-                const btn = document.createElement('button');
-                btn.className = 'attendance-date-btn' + (d === att.activeDate ? ' active' : '');
-                // Parse date|type format
-                const parts = d.split('|');
-                const dateStr = parts[0];
-                const sessionType = parts[1] || 'lecture';
-                const dateObj = new Date(dateStr + 'T12:00:00');
-                const typeLabel = sessionType === 'section' ? '§' : '🎓';
-                btn.textContent = `${typeLabel} ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-                btn.title = `${dateStr} — ${sessionType}`;
-                btn.style.cssText += sessionType === 'section' ? 'border-color:#3498db;' : '';
-                if (d === att.activeDate) {
-                    btn.style.background = sessionType === 'section' ? '#3498db' : 'var(--primary)';
-                }
-                btn.addEventListener('click', () => { att.activeDate = d; renderAttendance(); });
-                
-                // Delete on right-click
-                btn.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    if (confirm(`Delete attendance for ${d}?`)) {
-                        att.dates = att.dates.filter(x => x !== d);
-                        delete att.records[d];
-                        if (att.activeDate === d) att.activeDate = att.dates[att.dates.length - 1] || null;
-                        renderAttendance();
-                    }
-                });
-                datesEl.appendChild(btn);
-            });
-
-            // Stats
-            const statsEl = document.getElementById('attendanceStats');
-            const gridEl = document.getElementById('attendanceGrid');
-            if (!att.activeDate) {
-                statsEl.innerHTML = '';
-                gridEl.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 40px;">Select or create a session to view attendance.</div>';
-                return;
-            }
-
-            const names = getAllStudentNames();
-            const records = att.records[att.activeDate] || {};
-            // Ensure all names exist
-            names.forEach(n => { if (records[n] === undefined) records[n] = false; });
-            const presentCount = names.filter(n => records[n]).length;
-            const absentCount = names.length - presentCount;
-            const activeType = (att.activeDate.split('|')[1] || 'lecture');
-            const typeEmoji = activeType === 'section' ? '§' : '🎓';
-            const activeDate = att.activeDate.split('|')[0];
-
-            statsEl.innerHTML = `
-                <div class="attendance-stat-box" style="background: #e3f2fd; color: #2980b9;">
-                    <div style="font-size: 1.2em; font-weight: bold;">${typeEmoji} ${activeType.charAt(0).toUpperCase() + activeType.slice(1)}</div>
-                    <div>${new Date(activeDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                </div>
-                <div class="attendance-stat-box" style="background: #d5f4e6; color: #27ae60;">
-                    <div style="font-size: 2em; font-weight: bold;">${presentCount}</div>
-                    <div>Present</div>
-                </div>
-                <div class="attendance-stat-box" style="background: #ffe5e5; color: #e74c3c;">
-                    <div style="font-size: 2em; font-weight: bold;">${absentCount}</div>
-                    <div>Absent</div>
-                </div>
-                <div class="attendance-stat-box" style="background: #e3f2fd; color: #2980b9;">
-                    <div style="font-size: 2em; font-weight: bold;">${names.length > 0 ? Math.round(presentCount / names.length * 100) : 0}%</div>
-                    <div>Rate</div>
-                </div>
-            `;
-
-            // Grid
-            gridEl.innerHTML = '';
-            names.forEach(name => {
-                const isPresent = records[name];
-                const card = document.createElement('div');
-                card.className = 'attendance-card ' + (isPresent ? 'present' : 'absent');
-                
-                const student = currentData.students.find(s => s.name === name);
-                const photo = (student && student.photo) || photoCropperState.croppedPhotos[name];
-                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
-                const photoHTML = photo
-                    ? `<img class="att-photo" src="${photo}" alt="${name}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
-                    : `<div class="att-photo">${initials}</div>`;
-
-                card.innerHTML = `
-                    ${photoHTML}
-                    <span style="flex:1; ${isPresent ? '' : 'opacity:0.6;'}">${student && student.preferredName ? student.preferredName : name.split(' ')[0]} ${name.split(' ').slice(-1)[0]}</span>
-                    <span class="att-check">${isPresent ? '✅' : '⬜'}</span>
-                `;
-                card.addEventListener('click', () => {
-                    records[name] = !records[name];
-                    autoSave();
-                    renderAttendance();
-                });
-                gridEl.appendChild(card);
-            });
-        }
 
         // File input change handlers
         document.getElementById('quizFile').addEventListener('change', (e) => {
@@ -3076,10 +2670,24 @@
                     });
                 case 'risk-high':
                     const riskOrder = { high: 3, medium: 2, low: 1 };
-                    return sorted.sort((a, b) => riskOrder[b.riskLevel] - riskOrder[a.riskLevel]);
+                    return sorted.sort((a, b) => (riskOrder[b.riskLevel] || 0) - (riskOrder[a.riskLevel] || 0));
                 case 'risk-low':
                     const riskOrderLow = { high: 3, medium: 2, low: 1 };
-                    return sorted.sort((a, b) => riskOrderLow[a.riskLevel] - riskOrderLow[b.riskLevel]);
+                    return sorted.sort((a, b) => (riskOrderLow[a.riskLevel] || 0) - (riskOrderLow[b.riskLevel] || 0));
+                case 'missing-quiz':
+                    // Missing-quiz students first, then by name
+                    return sorted.sort((a, b) => {
+                        if (a.isMissing && !b.isMissing) return -1;
+                        if (!a.isMissing && b.isMissing) return 1;
+                        return (a.name || '').localeCompare(b.name || '');
+                    });
+                case 'not-enrolled':
+                    // Quiz-but-not-enrolled students first, then by name
+                    return sorted.sort((a, b) => {
+                        if (a.isNotEnrolled && !b.isNotEnrolled) return -1;
+                        if (!a.isNotEnrolled && b.isNotEnrolled) return 1;
+                        return (a.name || '').localeCompare(b.name || '');
+                    });
                 default:
                     return sorted;
             }
@@ -3109,6 +2717,15 @@
                 });
             }
             
+            // Also mark quiz-but-not-enrolled students (existing students in the quiz list)
+            // by finding their names in the quizOnlyStudents list
+            if (currentData && currentData.quizOnlyStudents && currentData.quizOnlyStudents.length > 0 && activeSection === 'all') {
+                const notEnrolledSet = new Set(currentData.quizOnlyStudents);
+                allStudents.forEach(s => {
+                    if (notEnrolledSet.has(s.name)) s.isNotEnrolled = true;
+                });
+            }
+            
             // Apply current sort to all students
             const sortSelect = document.getElementById('sortStudents');
             const sortBy = sortByOverride || (sortSelect ? sortSelect.value : 'firstname');
@@ -3117,10 +2734,8 @@
             // Render all students
             sortedStudents.forEach((student, index) => {
                 if (student.isMissing) {
-                    // Render missing student card
                     renderMissingStudentCard(student, container);
                 } else {
-                    // Render regular student card
                     renderRegularStudentCard(student, container);
                 }
             });
@@ -3150,6 +2765,7 @@
                 ${photoHTML}
                 <div class="student-info">
                     <div class="student-name">${displayName}</div>
+                    ${student.isNotEnrolled ? `<span style="background:#9b59b6; color:white; font-size:0.75em; padding:2px 8px; border-radius:10px; margin-right:4px; display:inline-block;">🔍 NOT ON ROSTER</span>` : ''}
                     ${sectionCode ? `<span style="background:#3498db; color:white; font-size:0.75em; padding:2px 8px; border-radius:10px; margin-bottom:4px; display:inline-block;">§ ${sectionCode}</span>` : ''}
                     ${student.pronouns ? `<div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 3px;">${student.pronouns}</div>` : ''}
                     ${student.pronunciation ? `<div class="student-pronunciation">${student.pronunciation}</div>` : ''}
@@ -4092,45 +3708,65 @@
             summarySection.className = 'insight-section';
             summarySection.innerHTML = `
                 <div class="insight-title">📋 ${isFiltered ? 'Section ' + activeSection + ' Summary' : 'Class Summary'}</div>
+                <div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px;">💡 Click any card below to jump to those students</div>
                 <div style="display: grid; grid-template-columns: repeat(${quizOnlyCount > 0 ? 4 : 3}, 1fr); gap: 15px; margin-bottom: 20px;">
-                    <div style="background: var(--success); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                    <div class="summary-card" data-action="sort-all" style="background: var(--success); color: white; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s;">
                         <div style="font-size: 2em; font-weight: bold;">${rosterCount}</div>
                         <div style="opacity: 0.9;">Total Enrolled</div>
                     </div>
-                    <div style="background: var(--accent); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                    <div class="summary-card" data-action="sort-quiz-completed" style="background: var(--accent); color: white; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s;">
                         <div style="font-size: 2em; font-weight: bold;">${quizCount}</div>
                         <div style="opacity: 0.9;">Quiz Completed</div>
                     </div>
-                    <div style="background: ${missingCount > 0 ? 'var(--warning)' : 'var(--success)'}; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                    <div class="summary-card" data-action="sort-missing" style="background: ${missingCount > 0 ? 'var(--warning)' : 'var(--success)'}; color: white; padding: 20px; border-radius: 8px; text-align: center; cursor: ${missingCount > 0 ? 'pointer' : 'default'}; transition: all 0.2s;">
                         <div style="font-size: 2em; font-weight: bold;">${missingCount}</div>
                         <div style="opacity: 0.9;">Missing Quiz</div>
                     </div>
                     ${quizOnlyCount > 0 ? `
-                        <div style="background: #9b59b6; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div class="summary-card" data-action="sort-not-enrolled" style="background: #9b59b6; color: white; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s;">
                             <div style="font-size: 2em; font-weight: bold;">${quizOnlyCount}</div>
                             <div style="opacity: 0.9;">Quiz But Not Enrolled</div>
                         </div>
                     ` : ''}
                 </div>
-                ${currentData.missingStudents && currentData.missingStudents.length > 0 ? `
-                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid var(--warning); margin-bottom: 15px;">
-                        <strong>⚠️ Students Missing Quiz:</strong><br>
-                        <ul style="margin-top: 10px; padding-left: 20px;">
-                            ${currentData.missingStudents.map(name => `<li>${name}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                ${currentData.quizOnlyStudents && currentData.quizOnlyStudents.length > 0 ? `
-                    <div style="background: #e8daef; padding: 15px; border-radius: 8px; border-left: 4px solid #9b59b6;">
-                        <strong>🔍 Students Who Took Quiz But Not On Roster:</strong><br>
-                        <p style="margin-top: 8px; font-size: 0.9em; color: #555;">These students completed the quiz but aren't on the official roster. They may have dropped or transferred.</p>
-                        <ul style="margin-top: 10px; padding-left: 20px;">
-                            ${currentData.quizOnlyStudents.map(name => `<li>${name}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
             `;
             container.appendChild(summarySection);
+            
+            // Wire up click handlers for summary cards
+            setTimeout(() => {
+                summarySection.querySelectorAll('.summary-card').forEach(card => {
+                    const action = card.dataset.action;
+                    if (action === 'sort-missing' && missingCount === 0) return;
+                    
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateY(-3px)';
+                        card.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateY(0)';
+                        card.style.boxShadow = 'none';
+                    });
+                    card.addEventListener('click', () => {
+                        const sortSelect = document.getElementById('sortStudents');
+                        if (!sortSelect) return;
+                        
+                        let newSort;
+                        if (action === 'sort-missing') newSort = 'missing-quiz';
+                        else if (action === 'sort-not-enrolled') newSort = 'not-enrolled';
+                        else if (action === 'sort-quiz-completed') newSort = 'firstname';
+                        else newSort = 'firstname';
+                        
+                        sortSelect.value = newSort;
+                        sortSelect.dispatchEvent(new Event('change'));
+                        
+                        // Scroll the students panel into view
+                        const studentsPanel = document.getElementById('studentsList');
+                        if (studentsPanel) {
+                            studentsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
+                });
+            }, 50);
             
             const isUndergrad = dashboardState.currentClass === 'undergrad-qual-methods';
             
