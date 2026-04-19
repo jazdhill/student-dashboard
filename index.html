@@ -642,6 +642,20 @@
         </div>
     </div>
 
+    <!-- Photo Manager Modal -->
+    <div id="photoManagerModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2500; overflow-y:auto; padding:20px;">
+        <div style="max-width:960px; margin:30px auto; background:white; border-radius:12px; padding:30px; position:relative;">
+            <button id="closePhotoManager" style="position:absolute; top:16px; right:16px; background:#e74c3c; color:white; border:none; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; line-height:1; z-index:10;">×</button>
+            <h2 style="color:#2C3E50; margin-bottom:4px;">📸 Manage Photos</h2>
+            <p style="color:#7f8c8d; font-size:0.9em; margin-bottom:20px;">Click a student to add, replace, or remove their photo. No screenshot needed upfront.</p>
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="photoManagerSearch" placeholder="Search students…" style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; width:220px;">
+                <span id="photoManagerStats" style="font-size:0.9em; color:#7f8c8d;"></span>
+            </div>
+            <div id="photoManagerGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:16px;"></div>
+        </div>
+    </div>
+
     <!-- Ground Rules Modal -->
     <div id="groundRulesModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto; padding:20px;">
         <div style="max-width:900px; margin:50px auto; background:white; border-radius:12px; padding:30px; position:relative; max-height:85vh; display:flex; flex-direction:column;">
@@ -3323,7 +3337,7 @@
 
         // Permanent Manage Photos button — always visible once dashboard loaded
         document.getElementById('managePhotosBtn').addEventListener('click', () => {
-            openPhotoCropper();
+            openPhotoManager();
         });
         
         document.getElementById('closeCropper').addEventListener('click', () => {
@@ -3365,7 +3379,7 @@
             _launchCropperWithFile(photoFile, currentData);
         }
 
-        function _launchCropperWithFile(photoFile, currentData) {
+        function _launchCropperWithFile(photoFile, currentData, preSelectStudent) {
             // Sync existing student photos into croppedPhotos library
             currentData.students.forEach(s => {
                 if (s.photo && !photoCropperState.croppedPhotos[s.name]) {
@@ -3375,6 +3389,14 @@
             
             // Populate student dropdown with ALL students (quiz + missing)
             populateCropperDropdown(currentData);
+
+            // Pre-select a specific student if coming from photo manager
+            if (preSelectStudent) {
+                const sel = document.getElementById('studentNameSelect');
+                sel.value = preSelectStudent;
+                // Trigger change to update remove button state
+                sel.dispatchEvent(new Event('change'));
+            }
             
             // Update count to show existing photos
             document.getElementById('photosSavedCount').textContent = Object.keys(photoCropperState.croppedPhotos).length;
@@ -3600,6 +3622,116 @@
             autoSave();
             alert(`✓ Photo removed for ${studentName}.`);
         });
+
+        // ─── PHOTO MANAGER ───────────────────────────────────────────
+        document.getElementById('closePhotoManager').addEventListener('click', () => {
+            document.getElementById('photoManagerModal').style.display = 'none';
+        });
+        document.getElementById('photoManagerModal').addEventListener('click', (e) => {
+            if (e.target.id === 'photoManagerModal') document.getElementById('photoManagerModal').style.display = 'none';
+        });
+
+        function openPhotoManager() {
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) { alert('No class data loaded yet.'); return; }
+            renderPhotoManagerGrid(currentData, '');
+            document.getElementById('photoManagerSearch').value = '';
+            document.getElementById('photoManagerModal').style.display = 'block';
+
+            // Search handler
+            const search = document.getElementById('photoManagerSearch');
+            const newSearch = search.cloneNode(true);
+            search.parentNode.replaceChild(newSearch, search);
+            newSearch.addEventListener('input', () => {
+                renderPhotoManagerGrid(currentData, newSearch.value.trim().toLowerCase());
+            });
+            newSearch.focus();
+        }
+
+        function renderPhotoManagerGrid(classData, filter) {
+            // Build full student list: quiz students + missing students
+            const allStudents = [
+                ...classData.students.map(s => ({ name: s.name, photo: s.photo || photoCropperState.croppedPhotos[s.name] || null, isMissing: false })),
+                ...(classData.missingStudents || []).map(n => ({ name: n, photo: photoCropperState.croppedPhotos[n] || null, isMissing: true }))
+            ].sort((a, b) => a.name.localeCompare(b.name));
+
+            const filtered = filter ? allStudents.filter(s => s.name.toLowerCase().includes(filter)) : allStudents;
+            const withPhoto = filtered.filter(s => s.photo).length;
+            const total = filtered.length;
+
+            document.getElementById('photoManagerStats').textContent =
+                `${withPhoto} of ${total} student${total === 1 ? '' : 's'} have photos`;
+
+            const grid = document.getElementById('photoManagerGrid');
+            grid.innerHTML = '';
+
+            filtered.forEach(student => {
+                const card = document.createElement('div');
+                card.style.cssText = 'border:1px solid #e0e0e0; border-radius:10px; padding:12px; text-align:center; background:white; position:relative;';
+
+                const initials = student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const photoHTML = student.photo
+                    ? `<img src="${student.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #e0e0e0;">`
+                    : `<div style="width:80px;height:80px;border-radius:50%;background:#bdc3c7;color:white;display:flex;align-items:center;justify-content:center;font-size:1.4em;font-weight:bold;margin:0 auto;">${escapeHtml(initials)}</div>`;
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:center; margin-bottom:8px;">${photoHTML}</div>
+                    <div style="font-size:0.82em; font-weight:600; color:#2C3E50; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(student.name)}">${escapeHtml(student.name.split(' ')[0])}</div>
+                    <div style="font-size:0.75em; color:#95a5a6; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(student.name.split(' ').slice(1).join(' '))}</div>
+                    ${student.isMissing ? '<div style="font-size:0.7em; color:#e67e22; margin-bottom:6px;">⚠ No quiz</div>' : ''}
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <label style="background:#3498db; color:white; padding:5px 8px; border-radius:5px; cursor:pointer; font-size:0.78em; font-weight:bold; white-space:nowrap;">
+                            ${student.photo ? '🔄 Replace' : '➕ Add Photo'}
+                            <input type="file" accept="image/*" style="display:none;" data-student="${escapeHtml(student.name)}">
+                        </label>
+                        ${student.photo ? `<button class="pm-remove-btn" data-student="${escapeHtml(student.name)}" style="background:#e74c3c; color:white; border:none; padding:5px 8px; border-radius:5px; cursor:pointer; font-size:0.78em; font-weight:bold;">🗑 Remove</button>` : ''}
+                    </div>
+                `;
+
+                // File input → crop flow
+                const fileInput = card.querySelector('input[type=file]');
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const targetStudent = e.target.dataset.student;
+                    // Store file into main screenshot input so cropper can use it
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('photoScreenshot').files = dt.files;
+                    document.getElementById('photoScreenshotName').textContent = `✓ ${file.name}`;
+                    document.getElementById('photoScreenshotBox').classList.add('active');
+                    document.getElementById('cropPhotosBtn').style.display = 'inline-block';
+                    // Close manager, pre-select student in cropper, launch cropper
+                    document.getElementById('photoManagerModal').style.display = 'none';
+                    const currentData = dashboardState.classes[dashboardState.currentClass];
+                    _launchCropperWithFile(file, currentData, targetStudent);
+                });
+
+                // Remove button
+                const removeBtn = card.querySelector('.pm-remove-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', () => {
+                        const name = removeBtn.dataset.student;
+                        if (!confirm(`Remove photo for ${name}?`)) return;
+                        delete photoCropperState.croppedPhotos[name];
+                        const currentData = dashboardState.classes[dashboardState.currentClass];
+                        if (currentData) {
+                            const s = currentData.students.find(s => s.name === name);
+                            if (s) s.photo = null;
+                        }
+                        autoSave();
+                        renderPhotoManagerGrid(classData, document.getElementById('photoManagerSearch').value.trim().toLowerCase());
+                    });
+                }
+
+                grid.appendChild(card);
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#95a5a6; padding:40px;">No students found.</div>';
+            }
+        }
+        // ─── END PHOTO MANAGER ───────────────────────────────────────
         
         document.getElementById('savePhotoBtn').addEventListener('click', () => {
             const studentName = document.getElementById('studentNameSelect').value;
@@ -3950,7 +4082,9 @@
             const isFiltered = activeSection !== 'all';
             
             // When filtered by section, show filtered counts; otherwise show full class
-            const rosterCount = isFiltered ? totalStudents : (currentData.originalRosterTotal || currentData.rosterTotal || totalStudents);
+            const rosterCount = isFiltered ? totalStudents
+                : (currentData.originalRosterTotal != null ? currentData.originalRosterTotal
+                    : (currentData.rosterTotal != null ? currentData.rosterTotal : totalStudents));
             const quizCount = totalStudents;
             const missingCount = isFiltered ? 0 : (currentData.missingStudents ? currentData.missingStudents.length : 0);
             const quizOnlyCount = isFiltered ? 0 : (currentData.quizOnlyStudents ? currentData.quizOnlyStudents.length : 0);
