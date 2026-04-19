@@ -440,6 +440,7 @@
                 <div id="headerControls" style="display: flex; gap: 10px; align-items: center;">
                     <span id="roleIndicator" style="background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-size: 0.85em;"></span>
                     <button id="nameGameBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">🎮 Name Game</button>
+                    <button id="managePhotosBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">📸 Manage Photos</button>
                     <button id="settingsBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">⚙️ Settings</button>
                     <button id="logoutBtn" class="btn" style="background: rgba(255,255,255,0.15); padding: 8px 16px; font-size: 0.85em; margin: 0;">🚪 Logout</button>
                 </div>
@@ -624,6 +625,8 @@
                         </select>
                         
                         <button id="savePhotoBtn" style="width: 100%; padding: 12px; background: var(--success); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; margin-bottom: 10px;" disabled>Save This Photo</button>
+                        
+                        <button id="removePhotoBtn" style="width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; margin-bottom: 10px;" disabled>🗑 Remove Photo for Student</button>
                         
                         <button id="clearSelectionBtn" style="width: 100%; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em;">Clear Selection</button>
                         
@@ -2678,6 +2681,7 @@
 
             // Show Name Game button now that data is loaded
             document.getElementById('nameGameBtn').style.display = 'inline-block';
+            document.getElementById('managePhotosBtn').style.display = 'inline-block';
             // Show roster update button for admin
             if (currentRole === 'admin') document.getElementById('showRosterUpdateBtn').style.display = 'inline-block';
             
@@ -3316,27 +3320,52 @@
         document.getElementById('cropPhotosBtn').addEventListener('click', () => {
             openPhotoCropper();
         });
+
+        // Permanent Manage Photos button — always visible once dashboard loaded
+        document.getElementById('managePhotosBtn').addEventListener('click', () => {
+            openPhotoCropper();
+        });
         
         document.getElementById('closeCropper').addEventListener('click', () => {
             document.getElementById('photoCropperModal').style.display = 'none';
         });
         
         function openPhotoCropper() {
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData || !currentData.students) {
+                alert('Please generate or load a dashboard first.');
+                return;
+            }
+
             const photoFile = document.getElementById('photoScreenshot').files[0];
             if (!photoFile) {
-                alert('Please upload a photo screenshot first');
+                // No screenshot loaded — open a file picker, then launch cropper
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/*';
+                picker.style.display = 'none';
+                document.body.appendChild(picker);
+                picker.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    document.body.removeChild(picker);
+                    if (!file) return;
+                    // Mirror into the existing photoScreenshot input so the rest of the flow works
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('photoScreenshot').files = dt.files;
+                    document.getElementById('photoScreenshotName').textContent = `✓ ${file.name}`;
+                    document.getElementById('photoScreenshotBox').classList.add('active');
+                    document.getElementById('cropPhotosBtn').style.display = 'inline-block';
+                    _launchCropperWithFile(file, currentData);
+                });
+                picker.click();
                 return;
             }
-            
-            // Get current class students
-            const currentData = dashboardState.classes[dashboardState.currentClass];
-            console.log('Photo cropper - currentData:', currentData);
-            
-            if (!currentData || !currentData.students) {
-                alert('Please generate dashboard first');
-                return;
-            }
-            
+
+            _launchCropperWithFile(photoFile, currentData);
+        }
+
+        function _launchCropperWithFile(photoFile, currentData) {
             // Sync existing student photos into croppedPhotos library
             currentData.students.forEach(s => {
                 if (s.photo && !photoCropperState.croppedPhotos[s.name]) {
@@ -3531,6 +3560,45 @@
             const hasSelection = photoCropperState.currentX !== 0 && photoCropperState.currentY !== 0;
             const hasStudent = document.getElementById('studentNameSelect').value !== '';
             document.getElementById('savePhotoBtn').disabled = !(hasSelection && hasStudent);
+            // Enable remove button whenever a student with a photo is selected
+            const removeBtn = document.getElementById('removePhotoBtn');
+            if (hasStudent) {
+                const name = document.getElementById('studentNameSelect').value;
+                const hasPhoto = !!(photoCropperState.croppedPhotos[name]);
+                removeBtn.disabled = !hasPhoto;
+                removeBtn.textContent = hasPhoto ? '🗑 Remove Photo for ' + name.split(' ')[0] : '🗑 Remove Photo for Student';
+            } else {
+                removeBtn.disabled = true;
+                removeBtn.textContent = '🗑 Remove Photo for Student';
+            }
+        });
+
+        document.getElementById('removePhotoBtn').addEventListener('click', () => {
+            const studentName = document.getElementById('studentNameSelect').value;
+            if (!studentName) return;
+            if (!confirm(`Remove the photo for ${studentName}? This cannot be undone.`)) return;
+
+            // Delete from croppedPhotos
+            delete photoCropperState.croppedPhotos[studentName];
+
+            // Clear from student object
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (currentData) {
+                const student = currentData.students.find(s => s.name === studentName);
+                if (student) student.photo = null;
+            }
+
+            // Update count and refresh dropdown
+            document.getElementById('photosSavedCount').textContent = Object.keys(photoCropperState.croppedPhotos).length;
+            if (currentData) populateCropperDropdown(currentData);
+
+            // Reset remove button
+            const removeBtn = document.getElementById('removePhotoBtn');
+            removeBtn.disabled = true;
+            removeBtn.textContent = '🗑 Remove Photo for Student';
+
+            autoSave();
+            alert(`✓ Photo removed for ${studentName}.`);
         });
         
         document.getElementById('savePhotoBtn').addEventListener('click', () => {
@@ -4747,7 +4815,9 @@
                 const hints = [];
                 if (student.pronouns) hints.push(student.pronouns);
                 if (student.pronunciation) hints.push('\uD83D\uDD0A "' + student.pronunciation + '"');
-                document.getElementById('ngCardHint').textContent = hints.join('  \u00b7  ');
+                // Store hints for reveal after answer — don't show upfront (would allow cheating)
+                document.getElementById('ngCardHint').textContent = '';
+                document.getElementById('ngCardHint').dataset.hint = hints.join('  \u00b7  ');
                 const input = document.getElementById('ngNameInput');
                 input.value = ''; input.style.border = '2px solid #ddd'; input.disabled = false; input.focus();
             } else {
@@ -4823,6 +4893,9 @@
             document.getElementById('ngMastered').textContent = '\u2b50 ' + nameGame.masteredCount + ' mastered';
             if (nameGame.mode === 'photo-to-name') {
                 document.getElementById('ngNameInput').disabled = true;
+                // Now reveal the pronunciation/pronouns hint
+                const hintEl = document.getElementById('ngCardHint');
+                if (hintEl.dataset.hint) hintEl.textContent = hintEl.dataset.hint;
             } else {
                 document.getElementById('ngPhotoGrid').querySelectorAll('button').forEach(b => b.disabled = true);
             }
@@ -4844,6 +4917,9 @@
             const feedbackEl = document.getElementById('ngFeedback');
             feedbackEl.style.background = '#fff8e5'; feedbackEl.style.display = 'block';
             input.disabled = true;
+            // Reveal hint on peek too
+            const hintEl = document.getElementById('ngCardHint');
+            if (hintEl && hintEl.dataset.hint) hintEl.textContent = hintEl.dataset.hint;
         });
         document.getElementById('ngNextBtn').addEventListener('click', () => {
             nameGame.currentIdx++;
