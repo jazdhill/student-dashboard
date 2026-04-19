@@ -439,7 +439,6 @@
                 </div>
                 <div id="headerControls" style="display: flex; gap: 10px; align-items: center;">
                     <span id="roleIndicator" style="background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-size: 0.85em;"></span>
-                    <button id="nameGameBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">🎮 Name Game</button>
                     <button id="settingsBtn" class="btn" style="background: rgba(255,255,255,0.2); padding: 8px 16px; font-size: 0.85em; margin: 0; display: none;">⚙️ Settings</button>
                     <button id="logoutBtn" class="btn" style="background: rgba(255,255,255,0.15); padding: 8px 16px; font-size: 0.85em; margin: 0;">🚪 Logout</button>
                 </div>
@@ -486,7 +485,27 @@
 
             <button class="btn" id="generateBtn" disabled>Generate Dashboard</button>
             <button class="btn" id="clearBtn" style="background: #95a5a6; margin-left: 10px;">Clear All Data</button>
-            <button class="btn" id="cropPhotosBtn" style="background: #3498db; margin-left: 10px; display: none;">Crop Photos from Screenshot</button>
+            <button class="btn" id="cropPhotosBtn" style="background: #3498db; margin-left: 10px; display: none;">✂️ Crop Photos from Screenshot</button>
+
+            <!-- Week 3+ Roster Update -->
+            <div id="rosterUpdateSection" style="display:none; margin-top: 20px; padding: 16px; background: #eaf4fb; border-radius: 8px; border: 1px solid #aed6f1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong style="color:#1a5276;">📋 Update Enrollment (Week 3+)</strong>
+                        <span style="font-size:0.85em; color:#5d8aa8; margin-left:8px;">Upload a new roster to sync drops and late adds</span>
+                    </div>
+                    <button id="hideRosterUpdateBtn" style="background:none; border:none; color:#7f8c8d; cursor:pointer; font-size:1.1em;">✕</button>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <label style="background: #2980b9; color: white; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em; white-space: nowrap;">
+                        📂 Choose New Roster PDF
+                        <input type="file" id="rosterUpdateFile" accept=".pdf" style="display:none;">
+                    </label>
+                    <span id="rosterUpdateFileName" style="color: #27ae60; font-weight: bold; font-size: 0.9em;"></span>
+                    <button id="syncRosterBtn" class="btn" style="background:#1a5276; margin:0; padding:10px 18px; font-size:0.9em; display:none;">🔄 Compare & Sync Roster</button>
+                </div>
+            </div>
+            <button id="showRosterUpdateBtn" class="btn" style="background: #2980b9; margin-left: 10px; display: none; font-size: 0.9em; padding: 10px 18px;">📋 Update Roster</button>
             
             <div style="margin-top: 10px;">
                 <label style="font-size: 0.9em; color: #e67e22; cursor: pointer;">
@@ -661,114 +680,30 @@
             <div style="margin-top: 25px; text-align: center;">
                 <button id="saveAllSettingsBtn" class="btn" style="background: var(--success);">💾 Save All Settings</button>
             </div>
-
-            <div style="margin-top: 30px; border-top: 2px solid #ecf0f1; padding-top: 25px;">
-                <h3 style="color: var(--primary); margin-bottom: 8px; border-bottom: 2px solid var(--accent); padding-bottom: 8px;">☁️ GitHub Sync (Cross-Device)</h3>
-                <p style="font-size: 0.88em; color: #7f8c8d; margin-bottom: 15px;">Store your dashboard state in your GitHub repo so TAs on other devices automatically get the latest data when they load the page. Only you (admin) need the token — TAs just refresh.</p>
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="ghOwner" placeholder="GitHub username (e.g. jsmith-ucla)" style="flex:1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95em;">
-                        <input type="text" id="ghRepo" placeholder="Repo name (e.g. student-dashboard)" style="flex:1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95em;">
-                    </div>
-                    <input type="password" id="ghToken" placeholder="Personal Access Token (ghp_…) — stored locally only" style="width:100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95em;">
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="saveGhSettingsBtn" class="btn" style="background: #2C3E50; margin: 0; padding: 10px 18px; font-size: 0.9em;">💾 Save GitHub Settings</button>
-                    <button id="pushToGhBtn" class="btn" style="background: #27AE60; margin: 0; padding: 10px 18px; font-size: 0.9em;">⬆️ Push to GitHub Now</button>
-                    <button id="pullFromGhBtn" class="btn" style="background: #2980b9; margin: 0; padding: 10px 18px; font-size: 0.9em;">⬇️ Pull from GitHub</button>
-                </div>
-                <div id="ghSyncStatus" style="margin-top: 10px; font-size: 0.85em; color: #7f8c8d; min-height: 18px;"></div>
-            </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- NAME GAME MODAL                                           -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <div id="nameGameModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:3000; overflow-y:auto; padding:20px;">
-        <div style="max-width:700px; margin:30px auto; background:white; border-radius:16px; padding:30px; position:relative;">
-            <button id="closeNameGame" style="position:absolute; top:16px; right:16px; background:#e74c3c; color:white; border:none; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; line-height:1; z-index:10;">×</button>
+    <!-- Roster Diff / Sync Modal -->
+    <div id="rosterDiffModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:2000; overflow-y:auto; padding:20px;">
+        <div style="max-width:700px; margin:50px auto; background:white; border-radius:12px; padding:30px; position:relative;">
+            <button id="closeRosterDiff" style="position:absolute; top:16px; right:16px; background:#e74c3c; color:white; border:none; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; line-height:1;">×</button>
+            <h2 style="color:#1a5276; margin-bottom:4px;">📋 Roster Changes Detected</h2>
+            <p style="color:#7f8c8d; font-size:0.9em; margin-bottom:20px;">Review the changes below before applying. Existing quiz data, photos, and notes are never touched.</p>
 
-            <!-- Header -->
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="font-size:2em;">🎮</div>
-                <h2 style="color:#2C3E50; margin:6px 0 4px;">Name Game</h2>
-                <p style="color:#7f8c8d; font-size:0.9em;">Learn your students' names and faces</p>
+            <!-- Late adds -->
+            <div id="diffLateAdds" style="margin-bottom:20px;"></div>
+
+            <!-- Dropped -->
+            <div id="diffDropped" style="margin-bottom:20px;"></div>
+
+            <!-- No changes -->
+            <div id="diffNoChanges" style="display:none; padding:20px; background:#e8f5e9; border-radius:8px; text-align:center; color:#27ae60; font-weight:bold;">
+                ✓ No enrollment changes detected — roster matches current dashboard.
             </div>
 
-            <!-- Setup screen -->
-            <div id="ngSetup">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
-                    <div>
-                        <label style="font-weight:bold; display:block; margin-bottom:6px; color:#2C3E50;">Game Mode</label>
-                        <select id="ngMode" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1em;">
-                            <option value="photo-to-name">📷 → ✏️ See photo, type name</option>
-                            <option value="name-to-photo">✏️ → 📷 See name, pick the photo</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-weight:bold; display:block; margin-bottom:6px; color:#2C3E50;">Filter by Section</label>
-                        <select id="ngSection" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1em;">
-                            <option value="all">All Students</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="background:#e8f4fd; padding:14px; border-radius:8px; margin-bottom:20px; font-size:0.9em; color:#2C3E50;">
-                    <strong>ℹ️ How it works:</strong> Cards you get wrong come back sooner. You "master" a student after 3 correct answers in a row. Only students with photos are included.
-                </div>
-                <div id="ngSetupStats" style="text-align:center; color:#7f8c8d; font-size:0.9em; margin-bottom:20px;"></div>
-                <button id="ngStartBtn" style="width:100%; padding:15px; background:#E74C3C; color:white; border:none; border-radius:10px; font-size:1.1em; font-weight:bold; cursor:pointer;">▶ Start Game</button>
-            </div>
-
-            <!-- Game screen -->
-            <div id="ngGame" style="display:none;">
-                <!-- Progress bar -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:0.9em; color:#7f8c8d;">
-                    <span id="ngProgress">Card 1 of 10</span>
-                    <span id="ngStreak"></span>
-                    <span id="ngMastered">⭐ 0 mastered</span>
-                </div>
-                <div style="height:6px; background:#ecf0f1; border-radius:3px; margin-bottom:20px; overflow:hidden;">
-                    <div id="ngProgressBar" style="height:100%; background:#27AE60; border-radius:3px; transition:width 0.4s; width:0%;"></div>
-                </div>
-
-                <!-- Photo→Name mode -->
-                <div id="ngPhotoToName" style="display:none; text-align:center;">
-                    <div id="ngCardPhoto" style="width:180px; height:180px; border-radius:50%; margin:0 auto 20px; overflow:hidden; border:4px solid #ecf0f1; background:#95a5a6; display:flex; align-items:center; justify-content:center; font-size:3em; color:white; font-weight:bold;"></div>
-                    <div id="ngCardHint" style="font-size:0.85em; color:#7f8c8d; margin-bottom:16px; min-height:20px;"></div>
-                    <input id="ngNameInput" type="text" placeholder="Type first name and press Enter…" autocomplete="off"
-                        style="width:100%; padding:14px; font-size:1.1em; border:2px solid #ddd; border-radius:8px; text-align:center; letter-spacing:1px; margin-bottom:12px;">
-                    <div style="display:flex; gap:10px;">
-                        <button id="ngSubmitBtn" style="flex:1; padding:13px; background:#E74C3C; color:white; border:none; border-radius:8px; font-size:1em; font-weight:bold; cursor:pointer;">Check ✓</button>
-                        <button id="ngPeekBtn" style="padding:13px 18px; background:#95a5a6; color:white; border:none; border-radius:8px; font-size:1em; cursor:pointer;">Peek 👀</button>
-                    </div>
-                </div>
-
-                <!-- Name→Photo mode (4-grid) -->
-                <div id="ngNameToPhoto" style="display:none; text-align:center;">
-                    <div id="ngNamePrompt" style="font-size:1.8em; font-weight:bold; color:#2C3E50; margin-bottom:8px;"></div>
-                    <div id="ngNameHint" style="font-size:0.85em; color:#7f8c8d; margin-bottom:20px; min-height:20px;"></div>
-                    <div id="ngPhotoGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:380px; margin:0 auto;"></div>
-                </div>
-
-                <!-- Feedback overlay -->
-                <div id="ngFeedback" style="display:none; text-align:center; padding:20px; border-radius:10px; margin-top:16px;">
-                    <div id="ngFeedbackIcon" style="font-size:3em; margin-bottom:8px;"></div>
-                    <div id="ngFeedbackText" style="font-size:1.1em; font-weight:bold; margin-bottom:12px;"></div>
-                    <button id="ngNextBtn" style="padding:12px 30px; background:#2C3E50; color:white; border:none; border-radius:8px; font-size:1em; cursor:pointer;">Next →</button>
-                </div>
-            </div>
-
-            <!-- Summary screen -->
-            <div id="ngSummary" style="display:none; text-align:center;">
-                <div style="font-size:4em; margin-bottom:10px;">🎉</div>
-                <h2 style="color:#2C3E50; margin-bottom:6px;">Round Complete!</h2>
-                <div id="ngSummaryStats" style="margin:20px 0;"></div>
-                <div id="ngMasteredList" style="text-align:left; background:#e8f5e9; padding:16px; border-radius:10px; margin-bottom:20px; max-height:200px; overflow-y:auto;"></div>
-                <div style="display:flex; gap:10px;">
-                    <button id="ngPlayAgainBtn" style="flex:1; padding:13px; background:#E74C3C; color:white; border:none; border-radius:8px; font-size:1em; font-weight:bold; cursor:pointer;">🔄 Play Again</button>
-                    <button id="ngDoneBtn" style="flex:1; padding:13px; background:#95a5a6; color:white; border:none; border-radius:8px; font-size:1em; cursor:pointer;">Done</button>
-                </div>
+            <div id="diffActions" style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
+                <button id="applyRosterSyncBtn" class="btn" style="background:#27ae60; margin:0; flex:1;">✓ Apply Selected Changes</button>
+                <button id="cancelRosterSyncBtn" class="btn" style="background:#95a5a6; margin:0;">Cancel</button>
             </div>
         </div>
     </div>
@@ -1212,6 +1147,297 @@
             }
         });
 
+        // ─── ROSTER UPDATE (WEEK 3+) ─────────────────────────────────
+
+        // Show "Update Roster" button once a dashboard is loaded
+        // (called from renderDashboard)
+        function showRosterUpdateBtn() {
+            if (currentRole === 'admin') {
+                document.getElementById('showRosterUpdateBtn').style.display = 'inline-block';
+            }
+        }
+
+        document.getElementById('showRosterUpdateBtn').addEventListener('click', () => {
+            document.getElementById('rosterUpdateSection').style.display = 'block';
+            document.getElementById('showRosterUpdateBtn').style.display = 'none';
+        });
+
+        document.getElementById('hideRosterUpdateBtn').addEventListener('click', () => {
+            document.getElementById('rosterUpdateSection').style.display = 'none';
+            document.getElementById('showRosterUpdateBtn').style.display = currentRole === 'admin' ? 'inline-block' : 'none';
+        });
+
+        document.getElementById('rosterUpdateFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('rosterUpdateFileName').textContent = `✓ ${file.name}`;
+                document.getElementById('syncRosterBtn').style.display = 'inline-block';
+            }
+        });
+
+        // Roster diff state (populated during compare, consumed during apply)
+        let pendingRosterDiff = { lateAdds: [], dropped: [] };
+
+        document.getElementById('syncRosterBtn').addEventListener('click', async () => {
+            const file = document.getElementById('rosterUpdateFile').files[0];
+            if (!file) { alert('Please select a new roster PDF first.'); return; }
+
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) { alert('No class data loaded. Load a dashboard first.'); return; }
+
+            const btn = document.getElementById('syncRosterBtn');
+            btn.textContent = '⏳ Parsing roster…';
+            btn.disabled = true;
+
+            try {
+                const rosterData = await parseRosterPDF(file);
+                if (rosterData.students.length === 0) {
+                    alert('Could not extract names from the PDF. Make sure it is a text-based roster PDF.');
+                    btn.textContent = '🔄 Compare & Sync Roster';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // New roster names (parsed to "First Last" format)
+                const newRosterNames = rosterData.students.map(r => parseRosterName(r));
+                const newRosterNorm = newRosterNames.map(n => normalizeName(n));
+
+                // Current roster: quiz students + missing students
+                const currentQuizNames = currentData.students.map(s => s.name);
+                const currentMissingNames = currentData.missingStudents || [];
+                const allCurrentNames = [...currentQuizNames, ...currentMissingNames];
+                const allCurrentNorm = allCurrentNames.map(n => normalizeName(n));
+
+                // Helper: does name A fuzzy-match any name in a normalized list?
+                function fuzzyMatchInList(normName, normList) {
+                    const parts = normName.split(' ').filter(p => p.length > 0);
+                    for (const candidate of normList) {
+                        const cParts = candidate.split(' ').filter(p => p.length > 0);
+                        let matches = 0;
+                        for (const p of parts) {
+                            for (const cp of cParts) {
+                                if (namesMatch(p, cp)) { matches++; break; }
+                            }
+                        }
+                        if (matches >= 2) return true;
+                    }
+                    return false;
+                }
+
+                // Late adds: on new roster but NOT in current dashboard
+                const lateAdds = newRosterNames.filter((name, i) =>
+                    !fuzzyMatchInList(newRosterNorm[i], allCurrentNorm)
+                );
+
+                // Dropped: in current dashboard but NOT on new roster
+                // Only flag quiz-completed students (missing-quiz students may just not have submitted yet)
+                const dropped = currentQuizNames.filter(name => {
+                    const norm = normalizeName(name);
+                    return !fuzzyMatchInList(norm, newRosterNorm);
+                });
+                // Also check missing students who are now gone from roster
+                const droppedMissing = currentMissingNames.filter(name => {
+                    const norm = normalizeName(name);
+                    return !fuzzyMatchInList(norm, newRosterNorm);
+                });
+
+                pendingRosterDiff = { lateAdds, dropped, droppedMissing };
+                showRosterDiffModal(lateAdds, dropped, droppedMissing, newRosterNames.length);
+
+            } catch(err) {
+                alert('Error parsing roster: ' + err.message);
+                console.error(err);
+            }
+
+            btn.textContent = '🔄 Compare & Sync Roster';
+            btn.disabled = false;
+        });
+
+        function showRosterDiffModal(lateAdds, dropped, droppedMissing, newTotal) {
+            const modal = document.getElementById('rosterDiffModal');
+            const hasChanges = lateAdds.length > 0 || dropped.length > 0 || droppedMissing.length > 0;
+
+            // Late adds section
+            const lateAddsEl = document.getElementById('diffLateAdds');
+            if (lateAdds.length > 0) {
+                lateAddsEl.innerHTML = `
+                    <div style="background:#e8f5e9; border-radius:10px; padding:16px; border-left:5px solid #27ae60;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <strong style="color:#1e8449;">➕ Late Adds (${lateAdds.length} new students)</strong>
+                            <label style="font-size:0.85em; color:#555; cursor:pointer;">
+                                <input type="checkbox" id="checkAllAdds" checked> Select all
+                            </label>
+                        </div>
+                        <p style="font-size:0.85em; color:#555; margin-bottom:12px;">These students are on the new roster but not in your dashboard. They'll be added as "Missing Quiz" cards so you can crop photos and add notes.</p>
+                        <div style="max-height:200px; overflow-y:auto;">
+                            ${lateAdds.map((name, i) => `
+                                <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:white; border-radius:6px; margin-bottom:6px; cursor:pointer; border:1px solid #a9dfbf;">
+                                    <input type="checkbox" class="add-check" data-name="${escapeHtml(name)}" checked>
+                                    <span style="font-weight:500; color:#1e8449;">✚</span>
+                                    <span>${escapeHtml(name)}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                // Select-all toggle
+                setTimeout(() => {
+                    const checkAll = document.getElementById('checkAllAdds');
+                    if (checkAll) {
+                        checkAll.addEventListener('change', () => {
+                            document.querySelectorAll('.add-check').forEach(cb => cb.checked = checkAll.checked);
+                        });
+                    }
+                }, 50);
+            } else {
+                lateAddsEl.innerHTML = '';
+            }
+
+            // Dropped section (quiz students)
+            const droppedEl = document.getElementById('diffDropped');
+            const allDropped = [
+                ...dropped.map(n => ({ name: n, type: 'quiz' })),
+                ...droppedMissing.map(n => ({ name: n, type: 'missing' }))
+            ];
+            if (allDropped.length > 0) {
+                droppedEl.innerHTML = `
+                    <div style="background:#fdf2f2; border-radius:10px; padding:16px; border-left:5px solid #e74c3c;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <strong style="color:#c0392b;">➖ Possible Drops (${allDropped.length} students)</strong>
+                            <label style="font-size:0.85em; color:#555; cursor:pointer;">
+                                <input type="checkbox" id="checkAllDrops"> Select all
+                            </label>
+                        </div>
+                        <p style="font-size:0.85em; color:#555; margin-bottom:12px;">These students are in your dashboard but not on the new roster. <strong>Check the boxes only for confirmed drops</strong> — unchecked students stay as-is. Quiz data and notes are deleted when removed.</p>
+                        <div style="max-height:200px; overflow-y:auto;">
+                            ${allDropped.map((item, i) => `
+                                <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:white; border-radius:6px; margin-bottom:6px; cursor:pointer; border:1px solid #f1948a;">
+                                    <input type="checkbox" class="drop-check" data-name="${escapeHtml(item.name)}" data-type="${item.type}">
+                                    <span style="font-weight:500; color:#e74c3c;">✖</span>
+                                    <span>${escapeHtml(item.name)}</span>
+                                    ${item.type === 'missing' ? '<span style="font-size:0.75em; color:#7f8c8d; margin-left:auto;">(no quiz)</span>' : ''}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                setTimeout(() => {
+                    const checkAll = document.getElementById('checkAllDrops');
+                    if (checkAll) {
+                        checkAll.addEventListener('change', () => {
+                            document.querySelectorAll('.drop-check').forEach(cb => cb.checked = checkAll.checked);
+                        });
+                    }
+                }, 50);
+            } else {
+                droppedEl.innerHTML = '';
+            }
+
+            document.getElementById('diffNoChanges').style.display = hasChanges ? 'none' : 'block';
+            document.getElementById('diffActions').style.display = hasChanges ? 'flex' : 'none';
+            if (!hasChanges) {
+                document.getElementById('applyRosterSyncBtn').style.display = 'none';
+            }
+
+            modal.style.display = 'block';
+        }
+
+        document.getElementById('closeRosterDiff').addEventListener('click', () => {
+            document.getElementById('rosterDiffModal').style.display = 'none';
+        });
+        document.getElementById('cancelRosterSyncBtn').addEventListener('click', () => {
+            document.getElementById('rosterDiffModal').style.display = 'none';
+        });
+        document.getElementById('rosterDiffModal').addEventListener('click', (e) => {
+            if (e.target.id === 'rosterDiffModal') document.getElementById('rosterDiffModal').style.display = 'none';
+        });
+
+        document.getElementById('applyRosterSyncBtn').addEventListener('click', () => {
+            const currentData = dashboardState.classes[dashboardState.currentClass];
+            if (!currentData) return;
+
+            // Collect checked adds
+            const toAdd = [...document.querySelectorAll('.add-check:checked')].map(cb => cb.dataset.name);
+            // Collect checked drops
+            const toRemove = [...document.querySelectorAll('.drop-check:checked')].map(cb => ({
+                name: cb.dataset.name, type: cb.dataset.type
+            }));
+
+            let addedCount = 0;
+            let removedCount = 0;
+
+            // Apply late adds — they go into missingStudents (no quiz data yet)
+            toAdd.forEach(name => {
+                const alreadyMissing = (currentData.missingStudents || []).some(n => normalizeName(n) === normalizeName(name));
+                const alreadyStudent = currentData.students.some(s => normalizeName(s.name) === normalizeName(name));
+                if (!alreadyMissing && !alreadyStudent) {
+                    if (!currentData.missingStudents) currentData.missingStudents = [];
+                    currentData.missingStudents.push(name);
+                    currentData.originalRosterTotal = (currentData.originalRosterTotal || 0) + 1;
+                    currentData.rosterTotal = (currentData.rosterTotal || 0) + 1;
+                    addedCount++;
+                }
+            });
+
+            // Apply drops
+            toRemove.forEach(({ name, type }) => {
+                if (type === 'quiz') {
+                    // Remove from quiz students
+                    const before = currentData.students.length;
+                    currentData.students = currentData.students.filter(s => s.name !== name);
+                    if (currentData.students.length < before) {
+                        // Clean up photo and notes
+                        if (photoCropperState.croppedPhotos[name]) delete photoCropperState.croppedPhotos[name];
+                        localStorage.removeItem(`notes_${name}`);
+                        // Adjust counts
+                        if (currentData.originalRosterTotal) currentData.originalRosterTotal--;
+                        if (currentData.rosterTotal) currentData.rosterTotal--;
+                        removedCount++;
+                    }
+                } else {
+                    // Remove from missing students
+                    const before = (currentData.missingStudents || []).length;
+                    currentData.missingStudents = (currentData.missingStudents || []).filter(n => n !== name);
+                    if ((currentData.missingStudents || []).length < before) {
+                        if (photoCropperState.croppedPhotos[name]) delete photoCropperState.croppedPhotos[name];
+                        localStorage.removeItem(`notes_${name}`);
+                        if (currentData.originalRosterTotal) currentData.originalRosterTotal--;
+                        if (currentData.rosterTotal) currentData.rosterTotal--;
+                        removedCount++;
+                    }
+                }
+            });
+
+            // Regenerate insights after removals
+            if (removedCount > 0) {
+                const quizDataForInsights = currentData.students.map(s => ({
+                    'First and Last Name': s.name,
+                    'What are your top 3 policy interest areas? ': s.policyInterests,
+                    "What's one hope you have for this class? ": s.hopes,
+                    "What's one fear you have for this class? ": s.fears,
+                    'What sorts of responsibilities do you have outside of this class? ': s.responsibilities,
+                    'Year and Major': s.major,
+                    'Year at UCLA? (Select all that apply)': s.major,
+                    'What section are you in?': s.section,
+                    'Previous experience with qualitative methods? (e.g. Conducting interviews, participating in focus groups, relevant course work)': s.priorQualExp || '',
+                    'Fill in the blank about your pet peeves for large class dynamics at UCLA. "In classes I hate it when ______"': s.petPeeve || '',
+                    "What's a ground rule for our class you'd like to suggest.": s.groundRuleSuggestion || '',
+                    "Are there any challenges you're currently facing or anticipate facing this quarter? (School related or otherwise; this is confidential for the teaching team only.)": s.challenges || ''
+                }));
+                currentData.insights = generateInsights(quizDataForInsights);
+            }
+
+            document.getElementById('rosterDiffModal').style.display = 'none';
+            renderClassData();
+            autoSave();
+
+            const parts = [];
+            if (addedCount > 0) parts.push(`➕ ${addedCount} late add${addedCount === 1 ? '' : 's'} added as Missing Quiz`);
+            if (removedCount > 0) parts.push(`➖ ${removedCount} student${removedCount === 1 ? '' : 's'} removed`);
+            if (parts.length > 0) {
+                alert(`Roster updated!\n\n${parts.join('\n')}\n\nDashboard has been auto-saved.`);
+            }
+        });
+        // ─── END ROSTER UPDATE ───────────────────────────────────────
+
         // ─── LOAD TEST DATA ──────────────────────────────────────────
         document.getElementById('loadTestDataBtn').addEventListener('click', () => {
             loadTestData();
@@ -1373,6 +1599,9 @@
             if (file) {
                 document.getElementById('photoScreenshotName').textContent = `✓ ${file.name}`;
                 document.getElementById('photoScreenshotBox').classList.add('active');
+                // Always show crop button the moment a screenshot is selected,
+                // regardless of whether a dashboard is loaded yet
+                document.getElementById('cropPhotosBtn').style.display = 'inline-block';
             }
         });
 
@@ -2644,9 +2873,9 @@
             const dashboard = document.getElementById('dashboard');
             dashboard.classList.add('active');
             
-            // Show name game button now that we have students
-            document.getElementById('nameGameBtn').style.display = 'inline-block';
-            
+            // Show roster update button for admin once data is loaded
+            showRosterUpdateBtn();
+
             // Render tabs
             renderTabs();
             
@@ -3588,28 +3817,21 @@
             const sortedItems = [...opts.items].sort((a, b) => b[1] - a[1]);
             const maxCount = sortedItems.length > 0 ? sortedItems[0][1] : 1;
             
-            const INITIAL_SHOW = 10;
-            const hasMore = sortedItems.length > INITIAL_SHOW;
-            const visibleItems = hasMore ? sortedItems.slice(0, INITIAL_SHOW) : sortedItems;
-            const hiddenItems = hasMore ? sortedItems.slice(INITIAL_SHOW) : [];
-            
-            function makeBarsHTML(items) {
-                return items.map(([label, count], i) => {
-                    const pct = opts.total > 0 ? ((count / opts.total) * 100).toFixed(0) : 0;
-                    const widthPct = (count / maxCount) * 100;
-                    const color = CHART_COLORS[sortedItems.indexOf(sortedItems.find(x => x[0] === label)) % CHART_COLORS.length];
-                    return `
-                        <div class="ds-bar-row" data-label="${escapeHtml(label)}" style="margin-bottom: 10px; cursor: ${opts.studentMapping ? 'pointer' : 'default'};">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9em;">
-                                <span style="font-weight: 500; color: #2C3E50;">${escapeHtml(label)}</span>
-                                <span style="color: #7f8c8d;"><strong style="color: ${color};">${count}</strong> · ${pct}%</span>
-                            </div>
-                            <div style="height: 18px; background: #f0f0f0; border-radius: 9px; overflow: hidden;">
-                                <div style="height: 100%; width: ${widthPct}%; background: ${color}; border-radius: 9px; transition: width 0.4s;"></div>
-                            </div>
-                        </div>`;
-                }).join('');
-            }
+            const barsHTML = sortedItems.map(([label, count], i) => {
+                const pct = opts.total > 0 ? ((count / opts.total) * 100).toFixed(0) : 0;
+                const widthPct = (count / maxCount) * 100;
+                const color = CHART_COLORS[i % CHART_COLORS.length];
+                return `
+                    <div class="ds-bar-row" data-label="${escapeHtml(label)}" style="margin-bottom: 10px; cursor: ${opts.studentMapping ? 'pointer' : 'default'};">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9em;">
+                            <span style="font-weight: 500; color: #2C3E50;">${escapeHtml(label)}</span>
+                            <span style="color: #7f8c8d;"><strong style="color: ${color};">${count}</strong> · ${pct}%</span>
+                        </div>
+                        <div style="height: 18px; background: #f0f0f0; border-radius: 9px; overflow: hidden;">
+                            <div style="height: 100%; width: ${widthPct}%; background: ${color}; border-radius: 9px; transition: width 0.4s;"></div>
+                        </div>
+                    </div>`;
+            }).join('');
             
             section.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -3620,16 +3842,8 @@
                 </div>
                 ${opts.subtitle ? `<div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 12px;">${opts.subtitle}</div>` : ''}
                 <div class="ds-bars-container">
-                    ${makeBarsHTML(visibleItems)}
+                    ${barsHTML}
                 </div>
-                ${hasMore ? `
-                    <div class="ds-bars-overflow" style="display:none;">
-                        ${makeBarsHTML(hiddenItems)}
-                    </div>
-                    <button class="ds-show-more-btn" style="width:100%; margin-top:10px; padding:8px 16px; background:white; border:1px solid #ddd; border-radius:20px; cursor:pointer; color:#2C3E50; font-size:0.88em; transition:all 0.2s;">
-                        Show ${hiddenItems.length} more ▼
-                    </button>
-                ` : ''}
             `;
             
             // Wire up click handlers for bars (drill-down)
@@ -3654,33 +3868,6 @@
                     exportBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         exportChartAsPNG(opts.title, opts.icon || '', sortedItems, opts.total, opts.subtitle || '');
-                    });
-                }
-
-                // Wire up show-more toggle
-                const showMoreBtn = section.querySelector('.ds-show-more-btn');
-                if (showMoreBtn) {
-                    showMoreBtn.addEventListener('click', () => {
-                        const overflow = section.querySelector('.ds-bars-overflow');
-                        const isHidden = overflow.style.display === 'none';
-                        overflow.style.display = isHidden ? 'block' : 'none';
-                        showMoreBtn.textContent = isHidden
-                            ? 'Show fewer ▲'
-                            : `Show ${hiddenItems.length} more ▼`;
-                        // Wire up click handlers for newly shown bars
-                        if (isHidden && opts.studentMapping) {
-                            overflow.querySelectorAll('.ds-bar-row').forEach(row => {
-                                row.addEventListener('click', () => {
-                                    const label = row.dataset.label;
-                                    const students = opts.studentMapping[label];
-                                    if (students && students.length > 0) {
-                                        showChartDrilldownModal(label, students, opts.type || 'item');
-                                    }
-                                });
-                                row.addEventListener('mouseenter', () => { row.style.opacity = '0.8'; });
-                                row.addEventListener('mouseleave', () => { row.style.opacity = '1'; });
-                            });
-                        }
                     });
                 }
             }, 50);
@@ -4606,391 +4793,7 @@
             modal.style.display = 'block';
         }
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // NAME GAME
-        // ═══════════════════════════════════════════════════════════════════════
-        const nameGame = {
-            deck: [], queue: [], currentIdx: 0, masteredCount: 0,
-            mode: 'photo-to-name', totalCards: 0, cardsPlayed: 0
-        };
-
-        document.getElementById('nameGameBtn').addEventListener('click', openNameGame);
-        document.getElementById('closeNameGame').addEventListener('click', () => {
-            document.getElementById('nameGameModal').style.display = 'none';
-        });
-        document.getElementById('nameGameModal').addEventListener('click', (e) => {
-            if (e.target.id === 'nameGameModal') document.getElementById('nameGameModal').style.display = 'none';
-        });
-
-        function openNameGame() {
-            const currentData = dashboardState.classes[dashboardState.currentClass];
-            if (!currentData || !currentData.students) { alert('No class data loaded yet.'); return; }
-            const withPhotos = currentData.students.filter(s => s.photo);
-            if (withPhotos.length < 2) {
-                alert('You need at least 2 students with photos to play the Name Game. Crop some photos first!'); return;
-            }
-            const secSel = document.getElementById('ngSection');
-            secSel.innerHTML = '<option value="all">All Students</option>';
-            if (currentData.sections && currentData.sections.length > 1) {
-                currentData.sections.forEach(sec => {
-                    const opt = document.createElement('option');
-                    opt.value = sec; opt.textContent = 'Section ' + sec;
-                    secSel.appendChild(opt);
-                });
-            }
-            updateNgSetupStats(getGameStudents(currentData, 'all'), 'all');
-            secSel.onchange = () => updateNgSetupStats(getGameStudents(currentData, secSel.value), secSel.value);
-            document.getElementById('ngSetup').style.display = 'block';
-            document.getElementById('ngGame').style.display = 'none';
-            document.getElementById('ngSummary').style.display = 'none';
-            document.getElementById('nameGameModal').style.display = 'block';
-        }
-
-        function getGameStudents(classData, section) {
-            return classData.students.filter(s => {
-                if (!s.photo) return false;
-                if (section === 'all') return true;
-                if (!s.section) return false;
-                const m = s.section.match(/1[A-E]/i);
-                return m ? m[0].toUpperCase() === section : false;
-            });
-        }
-
-        function updateNgSetupStats(students, section) {
-            const el = document.getElementById('ngSetupStats');
-            const btn = document.getElementById('ngStartBtn');
-            if (students.length < 2) {
-                el.innerHTML = '<span style="color:#e74c3c;">\u26a0\ufe0f Only ' + students.length + ' student(s) with photos. Need at least 2.</span>';
-                btn.disabled = true; btn.style.background = '#95a5a6';
-            } else {
-                el.innerHTML = '<strong style="color:#27ae60;">' + students.length + ' students</strong> with photos ready to play';
-                btn.disabled = false; btn.style.background = '#E74C3C';
-            }
-        }
-
-        document.getElementById('ngStartBtn').addEventListener('click', () => {
-            const currentData = dashboardState.classes[dashboardState.currentClass];
-            const section = document.getElementById('ngSection').value;
-            const students = getGameStudents(currentData, section);
-            if (students.length < 2) return;
-            nameGame.mode = document.getElementById('ngMode').value;
-            nameGame.deck = students.map(s => ({ student: s, streak: 0, correct: 0, wrong: 0, mastered: false }));
-            for (let i = nameGame.deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [nameGame.deck[i], nameGame.deck[j]] = [nameGame.deck[j], nameGame.deck[i]];
-            }
-            nameGame.queue = nameGame.deck.map((_, i) => i);
-            nameGame.currentIdx = 0; nameGame.masteredCount = 0;
-            nameGame.totalCards = nameGame.deck.length; nameGame.cardsPlayed = 0;
-            document.getElementById('ngSetup').style.display = 'none';
-            document.getElementById('ngSummary').style.display = 'none';
-            document.getElementById('ngGame').style.display = 'block';
-            document.getElementById('ngFeedback').style.display = 'none';
-            showNgCard();
-        });
-
-        function showNgCard() {
-            if (nameGame.currentIdx >= nameGame.queue.length) { showNgSummary(); return; }
-            const cardIdx = nameGame.queue[nameGame.currentIdx];
-            const card = nameGame.deck[cardIdx];
-            const student = card.student;
-            const total = nameGame.queue.length;
-            const pos = nameGame.currentIdx + 1;
-            document.getElementById('ngProgress').textContent = 'Card ' + pos + ' of ' + total;
-            document.getElementById('ngMastered').textContent = '\u2b50 ' + nameGame.masteredCount + ' mastered';
-            const streakEl = document.getElementById('ngStreak');
-            streakEl.textContent = card.streak > 1 ? '\uD83D\uDD25 ' + card.streak + ' streak' : '';
-            document.getElementById('ngProgressBar').style.width = Math.round((nameGame.currentIdx / total) * 100) + '%';
-            document.getElementById('ngFeedback').style.display = 'none';
-
-            if (nameGame.mode === 'photo-to-name') {
-                document.getElementById('ngPhotoToName').style.display = 'block';
-                document.getElementById('ngNameToPhoto').style.display = 'none';
-                const photoEl = document.getElementById('ngCardPhoto');
-                photoEl.innerHTML = '';
-                if (student.photo) {
-                    photoEl.style.background = 'transparent';
-                    photoEl.innerHTML = '<img src="' + student.photo + '" style="width:100%;height:100%;object-fit:cover;">';
-                } else {
-                    const initials = student.name.split(' ').map(n => n[0]).join('').substring(0, 2);
-                    photoEl.style.background = '#95a5a6'; photoEl.textContent = initials;
-                }
-                const hints = [];
-                if (student.pronouns) hints.push(student.pronouns);
-                if (student.pronunciation) hints.push('\uD83D\uDD0A "' + student.pronunciation + '"');
-                document.getElementById('ngCardHint').textContent = hints.join('  \u00b7  ');
-                const input = document.getElementById('ngNameInput');
-                input.value = ''; input.style.border = '2px solid #ddd'; input.disabled = false; input.focus();
-            } else {
-                document.getElementById('ngPhotoToName').style.display = 'none';
-                document.getElementById('ngNameToPhoto').style.display = 'block';
-                const displayName = student.preferredName && student.preferredName !== student.name.split(' ')[0]
-                    ? student.name + ' (' + student.preferredName + ')' : student.name;
-                document.getElementById('ngNamePrompt').textContent = displayName;
-                const hints = [];
-                if (student.pronouns) hints.push(student.pronouns);
-                if (student.pronunciation) hints.push('\uD83D\uDD0A "' + student.pronunciation + '"');
-                document.getElementById('ngNameHint').textContent = hints.join('  \u00b7  ');
-                const others = nameGame.deck.filter((c, i) => i !== cardIdx && c.student.photo).map(c => c.student);
-                for (let i = others.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [others[i], others[j]] = [others[j], others[i]];
-                }
-                const choices = [student, ...others.slice(0, 3)];
-                for (let i = choices.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [choices[i], choices[j]] = [choices[j], choices[i]];
-                }
-                const grid = document.getElementById('ngPhotoGrid');
-                grid.innerHTML = '';
-                choices.forEach(ch => {
-                    const btn = document.createElement('button');
-                    btn.style.cssText = 'border:3px solid #ecf0f1;border-radius:10px;padding:4px;cursor:pointer;background:white;transition:all 0.2s;overflow:hidden;';
-                    btn.innerHTML = '<img src="' + ch.photo + '" style="width:100%;height:130px;object-fit:cover;border-radius:7px;display:block;">';
-                    btn.addEventListener('click', () => handleNgResult(ch.name === student.name, student));
-                    grid.appendChild(btn);
-                });
-            }
-        }
-
-        function checkNgAnswer() {
-            const input = document.getElementById('ngNameInput');
-            const answer = input.value.trim().toLowerCase();
-            if (!answer) return;
-            const cardIdx = nameGame.queue[nameGame.currentIdx];
-            const student = nameGame.deck[cardIdx].student;
-            const firstName = (student.name.split(' ')[0] || '').toLowerCase();
-            const prefName = (student.preferredName || '').toLowerCase();
-            const correct = answer === firstName || answer === prefName || answer === student.name.toLowerCase()
-                || (answer.length >= 3 && firstName.startsWith(answer.substring(0, 3)));
-            handleNgResult(correct, student);
-        }
-
-        function handleNgResult(correct, student) {
-            const cardIdx = nameGame.queue[nameGame.currentIdx];
-            const card = nameGame.deck[cardIdx];
-            nameGame.cardsPlayed++;
-            const feedbackEl = document.getElementById('ngFeedback');
-            const iconEl = document.getElementById('ngFeedbackIcon');
-            const textEl = document.getElementById('ngFeedbackText');
-            if (correct) {
-                card.streak++; card.correct++;
-                iconEl.textContent = card.streak >= 3 ? '\u2b50' : '\u2705';
-                if (card.streak >= 3 && !card.mastered) {
-                    card.mastered = true; nameGame.masteredCount++;
-                    textEl.innerHTML = '<span style="color:#27ae60;">Mastered! ' + escapeHtml(student.name) + '</span>';
-                } else {
-                    textEl.innerHTML = '<span style="color:#27ae60;">Correct! ' + escapeHtml(student.name) + '</span>';
-                }
-                feedbackEl.style.background = '#e8f5e9';
-            } else {
-                card.streak = 0; card.wrong++;
-                textEl.innerHTML = '<span style="color:#e74c3c;">That's <strong>' + escapeHtml(student.name) + '</strong></span>';
-                iconEl.textContent = '\u274c';
-                feedbackEl.style.background = '#ffe5e5';
-                nameGame.queue.push(cardIdx); // comes back later
-            }
-            feedbackEl.style.display = 'block';
-            document.getElementById('ngMastered').textContent = '\u2b50 ' + nameGame.masteredCount + ' mastered';
-            if (nameGame.mode === 'photo-to-name') {
-                document.getElementById('ngNameInput').disabled = true;
-            } else {
-                document.getElementById('ngPhotoGrid').querySelectorAll('button').forEach(b => b.disabled = true);
-            }
-        }
-
-        document.getElementById('ngSubmitBtn').addEventListener('click', checkNgAnswer);
-        document.getElementById('ngNameInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') checkNgAnswer();
-        });
-
-        document.getElementById('ngPeekBtn').addEventListener('click', () => {
-            const cardIdx = nameGame.queue[nameGame.currentIdx];
-            const student = nameGame.deck[cardIdx].student;
-            const input = document.getElementById('ngNameInput');
-            input.value = student.name; input.style.border = '2px solid #f39c12';
-            nameGame.deck[cardIdx].streak = 0; nameGame.deck[cardIdx].wrong++;
-            nameGame.queue.push(cardIdx); nameGame.cardsPlayed++;
-            document.getElementById('ngFeedbackIcon').textContent = '\uD83D\uDC40';
-            document.getElementById('ngFeedbackText').innerHTML = '<span style="color:#f39c12;">Peeked \u2014 <strong>' + escapeHtml(student.name) + '</strong> will come back</span>';
-            const feedbackEl = document.getElementById('ngFeedback');
-            feedbackEl.style.background = '#fff8e5'; feedbackEl.style.display = 'block';
-            input.disabled = true;
-        });
-
-        document.getElementById('ngNextBtn').addEventListener('click', () => {
-            nameGame.currentIdx++;
-            if (nameGame.mode === 'photo-to-name') {
-                const inp = document.getElementById('ngNameInput');
-                inp.disabled = false; inp.value = ''; inp.style.border = '2px solid #ddd';
-            }
-            showNgCard();
-        });
-
-        function showNgSummary() {
-            document.getElementById('ngGame').style.display = 'none';
-            document.getElementById('ngSummary').style.display = 'block';
-            const total = nameGame.totalCards;
-            document.getElementById('ngSummaryStats').innerHTML =
-                '<div style="font-size:1.3em;color:#2C3E50;margin-bottom:8px;">You mastered <strong style="color:#27ae60;">' + nameGame.masteredCount + '</strong> of <strong>' + total + '</strong> students!</div>' +
-                '<div style="font-size:0.9em;color:#7f8c8d;">' + nameGame.cardsPlayed + ' cards played total</div>';
-            const mastered = nameGame.deck.filter(c => c.mastered);
-            const needsWork = nameGame.deck.filter(c => !c.mastered);
-            let listHTML = '';
-            if (mastered.length > 0) {
-                listHTML += '<p style="font-weight:bold;color:#27ae60;margin-bottom:8px;">\u2b50 Mastered (' + mastered.length + '):</p>';
-                listHTML += mastered.map(c => '<div style="padding:5px 10px;font-size:0.9em;">\u2713 ' + escapeHtml(c.student.name) + '</div>').join('');
-            }
-            if (needsWork.length > 0) {
-                listHTML += '<p style="font-weight:bold;color:#e74c3c;margin-top:12px;margin-bottom:8px;">\uD83D\uDCDA Still learning (' + needsWork.length + '):</p>';
-                listHTML += needsWork.map(c => '<div style="padding:5px 10px;font-size:0.9em;color:#555;">\u2022 ' + escapeHtml(c.student.name) + ' (' + c.correct + ' correct, ' + c.wrong + ' wrong)</div>').join('');
-            }
-            document.getElementById('ngMasteredList').innerHTML = listHTML || '<p style="color:#7f8c8d;">No data.</p>';
-        }
-
-        document.getElementById('ngPlayAgainBtn').addEventListener('click', () => {
-            document.getElementById('ngSummary').style.display = 'none';
-            document.getElementById('ngSetup').style.display = 'block';
-        });
-        document.getElementById('ngDoneBtn').addEventListener('click', () => {
-            document.getElementById('nameGameModal').style.display = 'none';
-        });
-        // ─── END NAME GAME ──────────────────────────────────────────────────────
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // GITHUB SYNC
-        // ═══════════════════════════════════════════════════════════════════════
-        const GH_STORAGE_KEY = 'dashboard_github_settings';
-        const GH_STATE_FILE = 'dashboard-state.json';
-
-        function getGhSettings() {
-            try { return JSON.parse(localStorage.getItem(GH_STORAGE_KEY) || '{}'); }
-            catch(e) { return {}; }
-        }
-        function setGhStatus(msg, color) {
-            const el = document.getElementById('ghSyncStatus');
-            if (el) { el.textContent = msg; el.style.color = color || '#7f8c8d'; }
-        }
-
-        // Wrap openSettingsModal to also populate GitHub fields
-        const _origOpenSettings = openSettingsModal;
-        openSettingsModal = function() {
-            _origOpenSettings();
-            const s = getGhSettings();
-            const ownerEl = document.getElementById('ghOwner');
-            const repoEl = document.getElementById('ghRepo');
-            const tokenEl = document.getElementById('ghToken');
-            if (ownerEl) ownerEl.value = s.owner || '';
-            if (repoEl) repoEl.value = s.repo || '';
-            if (tokenEl) tokenEl.value = s.token || '';
-            setGhStatus(s.owner && s.repo ? 'Connected: ' + s.owner + '/' + s.repo : 'Not configured', s.owner ? '#27ae60' : '#7f8c8d');
-        };
-
-        document.getElementById('saveGhSettingsBtn').addEventListener('click', () => {
-            const owner = document.getElementById('ghOwner').value.trim();
-            const repo = document.getElementById('ghRepo').value.trim();
-            const token = document.getElementById('ghToken').value.trim();
-            if (!owner || !repo) { setGhStatus('Please enter both username and repo name.', '#e74c3c'); return; }
-            localStorage.setItem(GH_STORAGE_KEY, JSON.stringify({ owner, repo, token }));
-            setGhStatus('Saved: ' + owner + '/' + repo, '#27ae60');
-        });
-
-        async function pushToGitHub() {
-            const s = getGhSettings();
-            if (!s.owner || !s.repo || !s.token) {
-                alert('Please configure GitHub settings in \u2699\ufe0f Settings first.'); return false;
-            }
-            const saveData = {
-                version: 2, savedAt: new Date().toISOString(),
-                classes: {}, croppedPhotos: photoCropperState.croppedPhotos
-            };
-            for (const [key, cls] of Object.entries(dashboardState.classes)) {
-                saveData.classes[key] = {
-                    name: cls.name, students: cls.students, insights: cls.insights,
-                    rosterTotal: cls.rosterTotal, originalRosterTotal: cls.originalRosterTotal,
-                    missingStudents: cls.missingStudents, quizOnlyStudents: cls.quizOnlyStudents,
-                    sections: cls.sections, currentSection: cls.currentSection, isUndergrad: cls.isUndergrad
-                };
-            }
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify(saveData))));
-            setGhStatus('\u23f3 Pushing to GitHub\u2026', '#f39c12');
-            try {
-                const apiBase = 'https://api.github.com/repos/' + s.owner + '/' + s.repo + '/contents/' + GH_STATE_FILE;
-                let sha = null;
-                const getResp = await fetch(apiBase, { headers: { 'Authorization': 'token ' + s.token, 'Accept': 'application/vnd.github.v3+json' } });
-                if (getResp.ok) { const existing = await getResp.json(); sha = existing.sha; }
-                const body = { message: 'Dashboard sync ' + new Date().toLocaleString(), content };
-                if (sha) body.sha = sha;
-                const putResp = await fetch(apiBase, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'token ' + s.token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                if (!putResp.ok) { const err = await putResp.json(); throw new Error(err.message || putResp.statusText); }
-                setGhStatus('\u2713 Pushed at ' + new Date().toLocaleTimeString(), '#27ae60');
-                return true;
-            } catch(err) {
-                setGhStatus('\u2717 Push failed: ' + err.message, '#e74c3c');
-                console.error('GitHub push error:', err); return false;
-            }
-        }
-
-        async function pullFromGitHub(silent) {
-            const s = getGhSettings();
-            if (!s.owner || !s.repo) return false;
-            if (!silent) setGhStatus('\u23f3 Pulling from GitHub\u2026', '#f39c12');
-            try {
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (s.token) headers['Authorization'] = 'token ' + s.token;
-                const apiBase = 'https://api.github.com/repos/' + s.owner + '/' + s.repo + '/contents/' + GH_STATE_FILE;
-                const resp = await fetch(apiBase, { headers });
-                if (!resp.ok) { if (!silent) setGhStatus('\u2717 Pull failed: ' + resp.statusText, '#e74c3c'); return false; }
-                const fileData = await resp.json();
-                const jsonStr = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
-                const saveData = JSON.parse(jsonStr);
-                dashboardState.classes = saveData.classes || {};
-                if (saveData.croppedPhotos) {
-                    photoCropperState.croppedPhotos = saveData.croppedPhotos;
-                    for (const cls of Object.values(dashboardState.classes)) {
-                        cls.students.forEach(s2 => { if (photoCropperState.croppedPhotos[s2.name]) s2.photo = photoCropperState.croppedPhotos[s2.name]; });
-                    }
-                }
-                localStorage.setItem('dashboard_save', JSON.stringify(saveData));
-                const classKeys = Object.keys(dashboardState.classes);
-                if (classKeys.length > 0) {
-                    dashboardState.currentClass = (currentTAClass && dashboardState.classes[currentTAClass]) ? currentTAClass : classKeys[0];
-                    renderDashboard();
-                    if (!silent) setGhStatus('\u2713 Pulled at ' + new Date().toLocaleTimeString() + ' \u2014 saved ' + new Date(saveData.savedAt).toLocaleString(), '#27ae60');
-                }
-                return true;
-            } catch(err) {
-                if (!silent) setGhStatus('\u2717 Pull failed: ' + err.message, '#e74c3c');
-                console.error('GitHub pull error:', err); return false;
-            }
-        }
-
-        document.getElementById('pushToGhBtn').addEventListener('click', pushToGitHub);
-        document.getElementById('pullFromGhBtn').addEventListener('click', () => pullFromGitHub(false));
-
-        // Auto-pull on page load (silent — works for TAs; falls back to localStorage if not configured or fails)
-        (async function() {
-            const s = getGhSettings();
-            if (s.owner && s.repo) await pullFromGitHub(true);
-        })();
-
-        // Wrap saveDashboardToStorage to auto-push when GitHub is configured
-        const _origSave = saveDashboardToStorage;
-        saveDashboardToStorage = function() {
-            const result = _origSave();
-            if (result && currentRole === 'admin') {
-                const s = getGhSettings();
-                if (s.owner && s.repo && s.token) pushToGitHub();
-            }
-            return result;
-        };
-        // ─── END GITHUB SYNC ──────────────────────────────────────────────────
-
-                // ─── GROUND RULES ────────────────────────────────────────────────────────
+        // ─── GROUND RULES ────────────────────────────────────────────────────────
         function openGroundRulesModal() {
             document.getElementById('groundRulesModal').style.display = 'block';
         }
